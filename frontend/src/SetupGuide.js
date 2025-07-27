@@ -674,14 +674,9 @@ const SetupGuide = ({ onComplete }) => {
   const validateStep3 = () => {
     const errors = {};
     
-    if (!formData.hasBusinessPhone) {
-      errors.hasBusinessPhone = 'Please select if you have a business phone';
-    }
-    if (formData.hasBusinessPhone === 'yes' && !formData.forwardCalls) {
-      errors.forwardCalls = 'Please select call forwarding option';
-    }
-    if (formData.hasBusinessPhone === 'no' && !formData.selectedPhoneNumber) {
-      errors.selectedPhoneNumber = 'Please select a phone number';
+    // For simplified phone setup, we only need to check if a phone number was selected
+    if (!formData.selectedPhoneNumber) {
+      errors.selectedPhoneNumber = 'Please purchase a phone number to continue';
     }
     
     return errors;
