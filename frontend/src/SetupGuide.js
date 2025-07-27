@@ -836,23 +836,25 @@ const SetupGuide = ({ onComplete }) => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="mb-6">
-            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
+          <div className="bg-white rounded-3xl shadow-elegant p-12 mx-4 max-w-md">
+            <div className="mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl flex items-center justify-center mx-auto shadow-soft">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
             </div>
-          </div>
-          <h2 className="text-lg font-medium text-slate-900 mb-2">
-            Loading Setup
-          </h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Preparing your configuration...
-          </p>
-          <div className="w-6 h-6 mx-auto">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-200 border-t-slate-600"></div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-3">
+              Loading Setup
+            </h2>
+            <p className="text-slate-600 mb-8 leading-relaxed">
+              Preparing your intelligent AI receptionist configuration...
+            </p>
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-3 border-slate-200 border-t-blue-500"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -873,11 +875,17 @@ const SetupGuide = ({ onComplete }) => {
   const renderError = (fieldName) => {
     if (validationErrors[fieldName]) {
       return (
-        <div className="text-red-600 text-sm mt-1 flex items-center bg-red-50 p-2 rounded-lg border border-red-200">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          {validationErrors[fieldName]}
+        <div className="mt-2 animate-slide-down">
+          <div className="flex items-center px-3 py-2 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+            <div className="flex-shrink-0">
+              <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+            <p className="ml-3 text-sm font-medium text-red-800">{validationErrors[fieldName]}</p>
+          </div>
         </div>
       );
     }
@@ -897,85 +905,105 @@ const SetupGuide = ({ onComplete }) => {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-8">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-sm">
-                <span className="text-2xl">🏢</span>
+          <div className="space-y-10">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl mb-6 shadow-soft-lg">
+                <span className="text-3xl">🏢</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Business Details</h2>
-              <p className="text-gray-600">Tell us about your business so we can personalize your AI receptionist</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Business Details</h2>
+              <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mx-auto">
+                Tell us about your business so we can personalize your AI receptionist to perfectly match your brand and needs
+              </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Business Name *</label>
-                <input
-                  type="text"
-                  value={formData.businessName}
-                  onChange={(e) => handleChange('businessName', e.target.value)}
-                  className={getInputClasses('businessName')}
-                  placeholder="Enter your business name"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-800 tracking-wide">Business Name *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.businessName}
+                    onChange={(e) => handleChange('businessName', e.target.value)}
+                    className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                    placeholder="Enter your business name"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                </div>
                 {renderError('businessName')}
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Industry / Type of Business *</label>
-                <input
-                  type="text"
-                  value={formData.industry}
-                  onChange={(e) => handleChange('industry', e.target.value)}
-                  className={getInputClasses('industry')}
-                  placeholder="e.g., Healthcare, Legal, Retail"
-                />
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-800 tracking-wide">Industry / Type of Business *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.industry}
+                    onChange={(e) => handleChange('industry', e.target.value)}
+                    className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                    placeholder="e.g., Healthcare, Legal, Retail"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                </div>
                 {renderError('industry')}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
-              <textarea
-                value={formData.businessAddress}
-                onChange={(e) => handleChange('businessAddress', e.target.value)}
-                rows="3"
-                className={getInputClasses('businessAddress')}
-                placeholder="Enter your business address"
-              />
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-slate-800 tracking-wide">Business Address</label>
+              <div className="relative">
+                <textarea
+                  value={formData.businessAddress}
+                  onChange={(e) => handleChange('businessAddress', e.target.value)}
+                  rows="4"
+                  className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft resize-none"
+                  placeholder="Enter your complete business address"
+                />
+                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => handleChange('website', e.target.value)}
-                  className={getInputClasses('website')}
-                  placeholder="https://yourwebsite.com"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-800 tracking-wide">Website</label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => handleChange('website', e.target.value)}
+                    className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                    placeholder="https://yourwebsite.com"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Existing Business Phone Number</label>
-                <input
-                  type="tel"
-                  value={formData.phoneNumber}
-                  onChange={(e) => handleChange('phoneNumber', e.target.value)}
-                  className={getInputClasses('phoneNumber')}
-                  placeholder="(555) 123-4567"
-                />
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-800 tracking-wide">Existing Business Phone Number</label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => handleChange('phoneNumber', e.target.value)}
+                    className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                    placeholder="(555) 123-4567"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Primary Contact Email *</label>
-              <input
-                type="email"
-                value={formData.primaryEmail}
-                onChange={(e) => handleChange('primaryEmail', e.target.value)}
-                className={getInputClasses('primaryEmail')}
-                placeholder="contact@yourbusiness.com"
-              />
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-slate-800 tracking-wide">Primary Contact Email *</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={formData.primaryEmail}
+                  onChange={(e) => handleChange('primaryEmail', e.target.value)}
+                  className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                  placeholder="contact@yourbusiness.com"
+                />
+                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+              </div>
               {renderError('primaryEmail')}
             </div>
           </div>
@@ -1801,123 +1829,177 @@ const SetupGuide = ({ onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white">
-          {/* Clean Header */}
-          <div className="border-b border-slate-200 px-8 py-12">
-            <div className="text-center max-w-2xl mx-auto">
-              <div className="mb-6">
-                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto">
-                  <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white shadow-elegant rounded-3xl mx-4 my-8 overflow-hidden">
+          {/* Sophisticated Header */}
+          <div className="relative bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-16">
+            <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+            <div className="relative text-center max-w-3xl mx-auto">
+              <div className="mb-8">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto shadow-soft border border-white/20">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 </div>
               </div>
-              <h1 className="text-3xl font-medium text-slate-900 mb-3">AI Voice Receptionist Setup</h1>
-              <p className="text-slate-600 text-base leading-relaxed">
-                Configure your AI receptionist to handle calls, bookings, and transfers exactly how your business needs
+              <h1 className="text-4xl font-semibold text-white mb-4 tracking-tight">AI Voice Receptionist Setup</h1>
+              <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto">
+                Configure your intelligent AI receptionist to handle calls, bookings, and transfers exactly how your business needs
               </p>
             </div>
           </div>
 
-          {/* Clean Progress */}
-          <div className="px-8 py-6 border-b border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-slate-500">
-                Step {currentStep} of {steps.length}
-              </span>
-              <span className="text-sm text-slate-600">
-                {Math.round((currentStep / steps.length) * 100)}% complete
-              </span>
-            </div>
-            
-            {/* Simple Progress Bar */}
-            <div className="w-full bg-slate-200 rounded-full h-2 mb-6">
-              <div 
-                className="h-full bg-brand-500 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${(currentStep / steps.length) * 100}%` }}
-              ></div>
-            </div>
-            
-            {/* Clean Step Labels */}
-            <div className="flex justify-between items-center text-xs text-slate-500">
-              {steps.map((step, index) => (
-                <div key={step.id} className={`text-center ${currentStep >= step.id ? 'text-slate-900' : ''}`}>
-                  <div className={`w-2 h-2 rounded-full mx-auto mb-1 ${
-                    currentStep >= step.id ? 'bg-brand-500' : 'bg-slate-300'
-                  }`}></div>
-                  <span className="hidden sm:block">{step.title}</span>
+          {/* Elegant Progress */}
+          <div className="px-8 py-8 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Progress</h3>
+                  <p className="text-sm text-slate-600 mt-1">Step {currentStep} of {steps.length}</p>
                 </div>
-              ))}
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-slate-900">{Math.round((currentStep / steps.length) * 100)}%</div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Complete</p>
+                </div>
+              </div>
+              
+              {/* Beautiful Progress Bar */}
+              <div className="relative">
+                <div className="w-full bg-slate-200 rounded-full h-3 shadow-inner">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
+                    style={{ width: `${(currentStep / steps.length) * 100}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Sophisticated Step Indicators */}
+              <div className="mt-8 grid grid-cols-7 gap-4">
+                {steps.map((step, index) => (
+                  <div key={step.id} className="text-center group">
+                    <div className={`mx-auto mb-3 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                      currentStep === step.id 
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-soft-lg scale-110 ring-4 ring-blue-100' 
+                        : currentStep > step.id 
+                          ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-soft scale-105' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 group-hover:scale-105'
+                    }`}>
+                      {currentStep > step.id ? (
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <span className="text-lg">{step.icon}</span>
+                      )}
+                    </div>
+                    <span className={`text-xs font-medium transition-colors duration-300 block ${
+                      currentStep >= step.id ? 'text-slate-900' : 'text-slate-500'
+                    }`}>
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Form Content */}
-          <div className="p-8">
-            <div className="max-w-2xl mx-auto">
-              {renderStep()}
+          {/* Beautiful Form Content */}
+          <div className="p-8 bg-gradient-to-b from-white to-slate-50">
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-soft border border-slate-100 p-8">
+                {renderStep()}
+              </div>
             </div>
           </div>
 
-          {/* Auto-save indicator */}
+          {/* Elegant Auto-save indicator */}
           {saveMessage && (
-            <div className="px-8 py-4 bg-secondary-50 border-b border-secondary-200/50 animate-slide-down">
+            <div className="px-8 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 animate-slide-down">
               <div className="flex items-center justify-center max-w-4xl mx-auto">
-                <div className="flex-shrink-0">
-                  {isSaving ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-secondary-600"></div>
-                  ) : (
-                    <svg className="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-secondary-800 font-semibold">{saveMessage}</p>
+                <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-soft border border-green-100">
+                  <div className="flex-shrink-0">
+                    {isSaving ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-200 border-t-green-600"></div>
+                    ) : (
+                      <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-green-800 font-medium">{saveMessage}</p>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Clean Navigation */}
-          <div className="bg-slate-50 px-8 py-6 flex justify-between items-center border-t border-slate-200">
-            <button
-              onClick={handlePrevStep}
-              disabled={currentStep === 1}
-              className="px-4 py-2 text-slate-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
-            >
-              ← Previous
-            </button>
+          {/* Sophisticated Navigation */}
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-6">
+            <div className="max-w-3xl mx-auto flex justify-between items-center">
+              <button
+                onClick={handlePrevStep}
+                disabled={currentStep === 1}
+                className="group flex items-center px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm border border-white/10"
+              >
+                <svg className="w-4 h-4 mr-2 group-hover:-translate-x-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
 
-            <div className="text-center">
-              {isSaving && (
-                <div className="flex items-center justify-center text-sm text-slate-600 mb-1">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-200 border-t-slate-600 mr-2"></div>
-                  Saving...
+              <div className="text-center">
+                {isSaving && (
+                  <div className="flex items-center justify-center text-sm text-white/80 mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white mr-2"></div>
+                    Auto-saving...
+                  </div>
+                )}
+                <div className="text-xs text-white/60 font-medium uppercase tracking-wider">
+                  Step {currentStep} of {steps.length}
                 </div>
-              )}
-              <div className="text-xs text-slate-500">
-                Step {currentStep} of {steps.length}
               </div>
-            </div>
 
-            {currentStep < steps.length ? (
-              <button
-                onClick={handleNextStep}
-                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                {isSubmitting ? 'Completing...' : 'Complete Setup'}
-              </button>
-            )}
+              {currentStep < steps.length ? (
+                <button
+                  onClick={handleNextStep}
+                  className="group flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105"
+                >
+                  Continue
+                  <svg className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="group flex items-center px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Completing Setup...
+                    </>
+                  ) : (
+                    <>
+                      Complete Setup
+                      <svg className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
