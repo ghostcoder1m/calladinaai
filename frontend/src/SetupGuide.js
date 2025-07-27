@@ -76,12 +76,7 @@ const SetupGuide = ({ onComplete }) => {
   const [saveMessage, setSaveMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Phone number porting states
-  const [existingPhoneNumber, setExistingPhoneNumber] = useState('');
-  const [checkingPortability, setCheckingPortability] = useState(false);
-  const [portabilityResult, setPortabilityResult] = useState(null);
-  const [portingInProgress, setPortingInProgress] = useState(false);
-  const [portingResult, setPortingResult] = useState(null);
+
 
   // Country options
   const countries = [
@@ -293,97 +288,7 @@ const SetupGuide = ({ onComplete }) => {
     }
   };
 
-  // Check if existing phone number can be ported to Twilio
-  const checkPortability = async (phoneNumber) => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      setTwilioError('Please enter a valid phone number');
-      return;
-    }
 
-    setCheckingPortability(true);
-    setTwilioError('');
-    setPortabilityResult(null);
-    
-    try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      
-      console.log('Checking portability for:', phoneNumber);
-      
-      const response = await fetch(`${apiUrl}/api/check-portability`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setPortabilityResult(data);
-      } else {
-        setTwilioError(data.error || 'Failed to check portability. Please try again.');
-      }
-    } catch (error) {
-      console.error('Portability check error:', error);
-      setTwilioError('Unable to check portability. Please check your phone number format and try again.');
-    } finally {
-      setCheckingPortability(false);
-    }
-  };
-
-  // Initiate phone number porting process
-  const initiatePorting = async (phoneNumber, accountHolder, currentProvider) => {
-    setPortingInProgress(true);
-    setTwilioError('');
-    
-    try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      
-      console.log('Initiating porting for:', phoneNumber);
-      
-      const response = await fetch(`${apiUrl}/api/initiate-porting`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber,
-          accountHolder: accountHolder,
-          currentProvider: currentProvider
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setPortingResult(data);
-        setFormData(prev => ({
-          ...prev,
-          selectedPhoneNumber: phoneNumber,
-          portingId: data.portingId,
-          portingStatus: 'initiated'
-        }));
-      } else {
-        setTwilioError(data.error || 'Failed to initiate porting. Please try again.');
-      }
-    } catch (error) {
-      console.error('Porting initiation error:', error);
-      setTwilioError('Unable to initiate porting. Please try again.');
-    } finally {
-      setPortingInProgress(false);
-    }
-  };
 
   const purchasePhoneNumber = async (phoneNumber) => {
 
@@ -1512,11 +1417,11 @@ const SetupGuide = ({ onComplete }) => {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-blue-900 mb-3">Get a New Phone Number</h3>
+                      <h3 className="text-xl font-bold text-blue-900 mb-3">Get Your AI Phone Number</h3>
                       <p className="text-blue-800 leading-relaxed">
-                        Search and purchase a phone number for your AI voice receptionist. 
-                        The number will be automatically configured and ready to receive calls 
-                        with intelligent responses and routing.
+                        Search and purchase a dedicated phone number for your AI voice receptionist. 
+                        Your new number will be automatically configured and ready to handle calls 
+                        with intelligent responses, transfers, and booking capabilities.
                       </p>
                     </div>
                   </div>
@@ -1719,7 +1624,6 @@ const SetupGuide = ({ onComplete }) => {
                   </div>
                 )}
               </div>
-            )}
           </div>
         );
 
