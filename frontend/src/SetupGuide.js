@@ -76,6 +76,13 @@ const SetupGuide = ({ onComplete }) => {
   const [saveMessage, setSaveMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Phone number porting states
+  const [existingPhoneNumber, setExistingPhoneNumber] = useState('');
+  const [checkingPortability, setCheckingPortability] = useState(false);
+  const [portabilityResult, setPortabilityResult] = useState(null);
+  const [portingInProgress, setPortingInProgress] = useState(false);
+  const [portingResult, setPortingResult] = useState(null);
+
   // Country options
   const countries = [
     { code: 'US', name: 'United States' },
@@ -283,6 +290,98 @@ const SetupGuide = ({ onComplete }) => {
       setTwilioError('Unable to connect to the server. Please check your internet connection and try again.');
     } finally {
       setSearchingNumbers(false);
+    }
+  };
+
+  // Check if existing phone number can be ported to Twilio
+  const checkPortability = async (phoneNumber) => {
+    if (!phoneNumber || phoneNumber.length < 10) {
+      setTwilioError('Please enter a valid phone number');
+      return;
+    }
+
+    setCheckingPortability(true);
+    setTwilioError('');
+    setPortabilityResult(null);
+    
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      console.log('Checking portability for:', phoneNumber);
+      
+      const response = await fetch(`${apiUrl}/api/check-portability`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPortabilityResult(data);
+      } else {
+        setTwilioError(data.error || 'Failed to check portability. Please try again.');
+      }
+    } catch (error) {
+      console.error('Portability check error:', error);
+      setTwilioError('Unable to check portability. Please check your phone number format and try again.');
+    } finally {
+      setCheckingPortability(false);
+    }
+  };
+
+  // Initiate phone number porting process
+  const initiatePorting = async (phoneNumber, accountHolder, currentProvider) => {
+    setPortingInProgress(true);
+    setTwilioError('');
+    
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      console.log('Initiating porting for:', phoneNumber);
+      
+      const response = await fetch(`${apiUrl}/api/initiate-porting`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber,
+          accountHolder: accountHolder,
+          currentProvider: currentProvider
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPortingResult(data);
+        setFormData(prev => ({
+          ...prev,
+          selectedPhoneNumber: phoneNumber,
+          portingId: data.portingId,
+          portingStatus: 'initiated'
+        }));
+      } else {
+        setTwilioError(data.error || 'Failed to initiate porting. Please try again.');
+      }
+    } catch (error) {
+      console.error('Porting initiation error:', error);
+      setTwilioError('Unable to initiate porting. Please try again.');
+    } finally {
+      setPortingInProgress(false);
     }
   };
 
@@ -1209,31 +1308,196 @@ const SetupGuide = ({ onComplete }) => {
             </div>
 
             {formData.hasBusinessPhone === 'yes' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Do you want to forward calls to the AI receptionist?</label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="forwardCalls"
-                      value="yes"
-                      checked={formData.forwardCalls === 'yes'}
-                      onChange={(e) => handleChange('forwardCalls', e.target.value)}
-                      className="mr-2"
-                    />
-                    Yes - Forward my existing number
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="forwardCalls"
-                      value="no"
-                      checked={formData.forwardCalls === 'no'}
-                      onChange={(e) => handleChange('forwardCalls', e.target.value)}
-                      className="mr-2"
-                    />
-                    No - Keep my existing number separate
-                  </label>
+              <div className="space-y-8 animate-slide-down">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100 shadow-soft">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                        <span className="text-xl">🔄</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-900 mb-3">Port Your Existing Number</h3>
+                      <p className="text-green-800 leading-relaxed">
+                        Transfer your existing business phone number to Twilio so it can be powered by AI. 
+                        We'll check if your number is portable and guide you through the process.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                      Enter Your Existing Phone Number
+                    </h3>
+                    
+                    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Business Phone Number *
+                          </label>
+                          <input
+                            type="tel"
+                            value={existingPhoneNumber}
+                            onChange={(e) => setExistingPhoneNumber(e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:border-green-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono"
+                            placeholder="+1 (555) 123-4567"
+                          />
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => checkPortability(existingPhoneNumber)}
+                          disabled={!existingPhoneNumber || checkingPortability}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+                        >
+                          {checkingPortability ? (
+                            <>
+                              <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Checking Portability...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Check if Number is Portable
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {portabilityResult && (
+                    <div className="animate-slide-down">
+                      {portabilityResult.portable ? (
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-bold text-green-900 mb-2">✅ Number is Portable!</h4>
+                              <div className="space-y-3">
+                                <p className="text-green-800">
+                                  <span className="font-semibold">Phone Number:</span> {portabilityResult.phoneNumber}
+                                </p>
+                                <p className="text-green-800">
+                                  <span className="font-semibold">Current Carrier:</span> {portabilityResult.carrier}
+                                </p>
+                                <p className="text-green-800">
+                                  <span className="font-semibold">Estimated Porting Time:</span> {portabilityResult.estimatedDays} business days
+                                </p>
+                                
+                                <div className="mt-4">
+                                  <h5 className="font-semibold text-green-900 mb-2">Required Documents:</h5>
+                                  <ul className="list-disc list-inside text-sm text-green-700 space-y-1">
+                                    {portabilityResult.requirements.map((req, index) => (
+                                      <li key={index}>{req}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div className="mt-6">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const accountHolder = prompt('Enter the account holder name for this phone number:') || 'Business Owner';
+                                      const currentProvider = prompt('Enter your current phone provider (optional):') || portabilityResult.carrier;
+                                      initiatePorting(portabilityResult.phoneNumber, accountHolder, currentProvider);
+                                    }}
+                                    disabled={portingInProgress}
+                                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {portingInProgress ? (
+                                      <>
+                                        <svg className="animate-spin w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Starting Porting Process...
+                                      </>
+                                    ) : (
+                                      'Start Porting Process'
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-r from-red-50 to-red-50 border border-red-200 rounded-xl p-6">
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-bold text-red-900 mb-2">Number Cannot Be Ported</h4>
+                              <p className="text-red-800 mb-4">
+                                Unfortunately, {portabilityResult.phoneNumber} cannot be ported to Twilio at this time.
+                              </p>
+                              <p className="text-sm text-red-700">
+                                You can still use call forwarding to route calls from your existing number to a new Twilio number with AI capabilities.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {portingResult && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 animate-slide-down">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-bold text-blue-900 mb-2">🚀 Porting Request Initiated!</h4>
+                          <div className="space-y-3">
+                            <p className="text-blue-800">
+                              <span className="font-semibold">Porting ID:</span> {portingResult.portingId}
+                            </p>
+                            <p className="text-blue-800">
+                              <span className="font-semibold">Phone Number:</span> {portingResult.phoneNumber}
+                            </p>
+                            <p className="text-blue-800">
+                              <span className="font-semibold">Status:</span> {portingResult.status}
+                            </p>
+                            <p className="text-blue-800">
+                              <span className="font-semibold">Estimated Completion:</span> {new Date(portingResult.estimatedCompletion).toLocaleDateString()}
+                            </p>
+                            
+                            <div className="mt-4">
+                              <h5 className="font-semibold text-blue-900 mb-2">Next Steps:</h5>
+                              <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1">
+                                {portingResult.nextSteps.map((step, index) => (
+                                  <li key={index}>{step}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
