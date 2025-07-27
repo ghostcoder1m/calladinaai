@@ -1390,36 +1390,45 @@ const SetupGuide = ({ onComplete }) => {
                           </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Popular Area Codes</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {popularAreaCodes
-                          .filter(area => area.country === formData.country || formData.country === '')
-                          .map(area => (
-                            <button
-                              key={area.code}
-                              type="button"
-                              onClick={() => {
-                                setSearchAreaCode(area.code);
-                                searchPhoneNumbers(area.code, formData.country);
-                              }}
-                              className="p-2 text-left bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
-                            >
-                              <div className="font-medium">{area.code}</div>
-                              <div className="text-xs text-gray-600">{area.location}</div>
-                            </button>
-                          ))}
+                      
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-slate-700 mb-4">Popular Area Codes</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {popularAreaCodes
+                            .filter(area => area.country === formData.country || formData.country === '')
+                            .map(area => (
+                              <button
+                                key={area.code}
+                                type="button"
+                                onClick={() => {
+                                  setSearchAreaCode(area.code);
+                                  searchPhoneNumbers(area.code, formData.country);
+                                }}
+                                className="p-3 text-left bg-white hover:bg-slate-50 rounded-lg text-sm border border-slate-200 hover:border-blue-300 transition-all duration-200 hover:shadow-soft"
+                              >
+                                <div className="font-semibold text-slate-900">{area.code}</div>
+                                <div className="text-xs text-slate-600">{area.location}</div>
+                              </button>
+                            ))}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {twilioError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                    {twilioError}
+                  <div className="bg-gradient-to-r from-red-50 to-red-50 border border-red-200 rounded-xl p-4 animate-slide-down">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-red-800 mb-1">Phone Number Search Error</h4>
+                        <p className="text-sm text-red-700">{twilioError}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -1471,14 +1480,27 @@ const SetupGuide = ({ onComplete }) => {
                 )}
 
                 {formData.selectedPhoneNumber && (
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">✅ Phone Number Selected</h4>
-                    <p className="text-green-800">
-                      Selected: <span className="font-medium">{formData.selectedPhoneNumber}</span>
-                    </p>
-                    <p className="text-sm text-green-700 mt-1">
-                      This number will be configured for your AI voice receptionist.
-                    </p>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 animate-slide-down">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-green-900 mb-2">Phone Number Successfully Acquired!</h4>
+                        <div className="space-y-2">
+                          <p className="text-green-800">
+                            Selected Number: <span className="font-mono font-bold text-lg text-green-900">{formData.selectedPhoneNumber}</span>
+                          </p>
+                          <p className="text-sm text-green-700">
+                            🎉 This number is now ready to be configured for your AI voice receptionist. It will handle all incoming calls with intelligent responses and routing.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
