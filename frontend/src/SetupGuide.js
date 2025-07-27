@@ -236,18 +236,29 @@ const SetupGuide = ({ onComplete }) => {
     return dayHours.includes(' - ') ? dayHours.split(' - ')[1] : '';
   };
 
-  // Twilio phone number search
+  // Twilio phone number search with enhanced error handling
   const searchPhoneNumbers = async (areaCode, country = 'US') => {
     if (!formData.twilioAccountSid || !formData.twilioAuthToken) {
-      setTwilioError('Please enter your Twilio credentials first');
+      setTwilioError('Please enter your Twilio Account SID and Auth Token first');
+      return;
+    }
+
+    if (!areaCode || areaCode.length < 3) {
+      setTwilioError('Please enter a valid area code (3+ digits)');
       return;
     }
 
     setSearchingNumbers(true);
     setTwilioError('');
+    setAvailableNumbers([]);
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/search-phone-numbers`, {
+      // Use localhost:3001 as fallback if environment variable is not set
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      console.log('Searching phone numbers...', { areaCode, country });
+      
+      const response = await fetch(`${apiUrl}/api/search-phone-numbers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,22 +266,29 @@ const SetupGuide = ({ onComplete }) => {
         body: JSON.stringify({
           accountSid: formData.twilioAccountSid,
           authToken: formData.twilioAuthToken,
-          areaCode: areaCode,
+          areaCode: areaCode.toString(),
           country: country
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.numbers) {
         setAvailableNumbers(data.numbers);
-        setSearchingNumbers(false);
+        if (data.numbers.length === 0) {
+          setTwilioError(`No phone numbers available for area code ${areaCode} in ${country}. Try a different area code.`);
+        }
       } else {
-        setTwilioError(data.error || 'Failed to search for phone numbers');
-        setSearchingNumbers(false);
+        setTwilioError(data.error || 'Failed to search for phone numbers. Please check your Twilio credentials.');
       }
     } catch (error) {
-      setTwilioError('Error connecting to server. Please check your credentials and try again.');
+      console.error('Phone number search error:', error);
+      setTwilioError('Unable to connect to the server. Please check your internet connection and try again.');
+    } finally {
       setSearchingNumbers(false);
     }
   };
@@ -281,8 +299,20 @@ const SetupGuide = ({ onComplete }) => {
       return;
     }
 
+    // Add loading state for the specific number being purchased
+    const purchasingButton = document.querySelector(`button[onclick*="${phoneNumber}"]`);
+    if (purchasingButton) {
+      purchasingButton.disabled = true;
+      purchasingButton.textContent = 'Purchasing...';
+    }
+
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/purchase-phone-number`, {
+      // Use localhost:3001 as fallback if environment variable is not set
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      console.log('Purchasing phone number:', phoneNumber);
+      
+      const response = await fetch(`${apiUrl}/api/purchase-phone-number`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,21 +324,38 @@ const SetupGuide = ({ onComplete }) => {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
         setFormData(prev => ({
           ...prev,
-          selectedPhoneNumber: data.phoneNumber
+          selectedPhoneNumber: data.phoneNumber,
+          phoneNumberSid: data.sid,
+          phoneNumberFriendlyName: data.friendlyName
         }));
         
         setAvailableNumbers([]);
         setTwilioError('');
+        
+        // Show success message
+        console.log('Phone number purchased successfully:', data.phoneNumber);
+        
       } else {
-        setTwilioError(data.error || 'Failed to purchase phone number');
+        setTwilioError(data.error || 'Failed to purchase phone number. Please check your Twilio account balance and try again.');
       }
     } catch (error) {
-      setTwilioError('Error connecting to server. Please try again.');
+      console.error('Phone number purchase error:', error);
+      setTwilioError('Unable to complete purchase. Please check your internet connection and Twilio account status.');
+    } finally {
+      // Reset button state
+      if (purchasingButton) {
+        purchasingButton.disabled = false;
+        purchasingButton.textContent = 'Select';
+      }
     }
   };
 
@@ -1205,98 +1252,146 @@ const SetupGuide = ({ onComplete }) => {
             )}
 
             {formData.hasBusinessPhone === 'no' && (
-              <div className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-blue-900 mb-2">🎯 Get a New Phone Number with Twilio</h3>
-                  <p className="text-sm text-blue-800">
-                    We'll help you find and purchase a new phone number using Twilio. 
-                    You'll need your Twilio Account SID and Auth Token.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Twilio Account SID *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.twilioAccountSid}
-                      onChange={(e) => handleChange('twilioAccountSid', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="AC..."
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Twilio Auth Token *
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.twilioAuthToken}
-                      onChange={(e) => handleChange('twilioAuthToken', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="••••••••••••••••"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-4">
-                    Search for Phone Numbers
-                  </label>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Country
-                        </label>
-                        <select
-                          value={formData.country}
-                          onChange={(e) => handleChange('country', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="US">United States</option>
-                          <option value="CA">Canada</option>
-                          <option value="GB">United Kingdom</option>
-                          <option value="AU">Australia</option>
-                          <option value="DE">Germany</option>
-                          <option value="FR">France</option>
-                          <option value="NL">Netherlands</option>
-                          <option value="IT">Italy</option>
-                          <option value="ES">Spain</option>
-                          <option value="SE">Sweden</option>
-                          <option value="SG">Singapore</option>
-                          <option value="HK">Hong Kong</option>
-                          <option value="JP">Japan</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Area Code
-                        </label>
-                        <input
-                          type="text"
-                          value={searchAreaCode}
-                          onChange={(e) => setSearchAreaCode(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="212, 415, etc."
-                          maxLength="5"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <button
-                          type="button"
-                          onClick={() => searchPhoneNumbers(searchAreaCode, formData.country)}
-                          disabled={!searchAreaCode || searchingNumbers}
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {searchingNumbers ? 'Searching...' : 'Search'}
-                        </button>
+              <div className="space-y-8 animate-slide-down">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-2xl border border-blue-100 shadow-soft">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                        <span className="text-xl">🎯</span>
                       </div>
                     </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-blue-900 mb-3">Get a New Phone Number with Twilio</h3>
+                      <p className="text-blue-800 leading-relaxed">
+                        We'll help you find and purchase a new phone number using Twilio. 
+                        You'll need your Twilio Account SID and Auth Token from your 
+                        <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline ml-1">
+                          Twilio Console
+                        </a>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-800 tracking-wide">
+                      Twilio Account SID *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.twilioAccountSid}
+                        onChange={(e) => handleChange('twilioAccountSid', e.target.value)}
+                        className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono text-sm"
+                        placeholder="AC********************************"
+                      />
+                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-800 tracking-wide">
+                      Twilio Auth Token *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={formData.twilioAuthToken}
+                        onChange={(e) => handleChange('twilioAuthToken', e.target.value)}
+                        className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono text-sm"
+                        placeholder="********************************"
+                      />
+                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                      Search for Available Phone Numbers
+                    </h3>
+                    
+                    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-slate-700">
+                            Country
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={formData.country}
+                              onChange={(e) => handleChange('country', e.target.value)}
+                              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft appearance-none"
+                            >
+                              <option value="US">🇺🇸 United States</option>
+                              <option value="CA">🇨🇦 Canada</option>
+                              <option value="GB">🇬🇧 United Kingdom</option>
+                              <option value="AU">🇦🇺 Australia</option>
+                              <option value="DE">🇩🇪 Germany</option>
+                              <option value="FR">🇫🇷 France</option>
+                              <option value="NL">🇳🇱 Netherlands</option>
+                              <option value="IT">🇮🇹 Italy</option>
+                              <option value="ES">🇪🇸 Spain</option>
+                              <option value="SE">🇸🇪 Sweden</option>
+                              <option value="SG">🇸🇬 Singapore</option>
+                              <option value="HK">🇭🇰 Hong Kong</option>
+                              <option value="JP">🇯🇵 Japan</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-slate-700">
+                            Area Code
+                          </label>
+                          <input
+                            type="text"
+                            value={searchAreaCode}
+                            onChange={(e) => setSearchAreaCode(e.target.value.replace(/\D/g, ''))}
+                            className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono"
+                            placeholder="212, 415, etc."
+                            maxLength="5"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-slate-700">
+                            &nbsp;
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => searchPhoneNumbers(searchAreaCode, formData.country)}
+                            disabled={!searchAreaCode || searchAreaCode.length < 3 || searchingNumbers || !formData.twilioAccountSid || !formData.twilioAuthToken}
+                            className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+                          >
+                            {searchingNumbers ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Searching...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Search Numbers
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Popular Area Codes</h4>
@@ -1329,26 +1424,46 @@ const SetupGuide = ({ onComplete }) => {
                 )}
 
                 {availableNumbers.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Available Phone Numbers</h4>
-                    <div className="space-y-2">
-                      {availableNumbers.map(number => (
-                        <div key={number.phoneNumber} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <div className="font-medium">{number.friendlyName}</div>
-                            <div className="text-sm text-gray-600">
-                              {number.locality}, {number.region} • 
-                              {number.capabilities.includes('voice') && ' Voice'}
-                              {number.capabilities.includes('sms') && ' SMS'}
+                  <div className="animate-slide-down">
+                    <h4 className="text-lg font-semibold text-slate-800 mb-6">Available Phone Numbers</h4>
+                    <div className="grid gap-4">
+                      {availableNumbers.map((number, index) => (
+                        <div 
+                          key={number.phoneNumber} 
+                          className="group p-6 bg-white border-2 border-slate-200 rounded-xl hover:border-green-300 hover:shadow-soft transition-all duration-200"
+                          style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div className="text-xl font-bold text-slate-900 font-mono">
+                                  {number.phoneNumber}
+                                </div>
+                                <div className="flex space-x-2">
+                                  {number.capabilities?.voice && (
+                                    <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                      📞 Voice
+                                    </span>
+                                  )}
+                                  {number.capabilities?.sms && (
+                                    <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                      💬 SMS
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-sm text-slate-600">
+                                📍 {number.locality}, {number.region}
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => purchasePhoneNumber(number.phoneNumber)}
+                              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 group-hover:scale-110"
+                            >
+                              Purchase Number
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => purchasePhoneNumber(number.phoneNumber)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                          >
-                            Select
-                          </button>
                         </div>
                       ))}
                     </div>
