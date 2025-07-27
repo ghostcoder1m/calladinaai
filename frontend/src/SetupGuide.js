@@ -1,0 +1,1923 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { db } from './firebase';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from './firebase';
+
+const SetupGuide = ({ onComplete }) => {
+  const [user] = useAuthState(auth);
+  const [formData, setFormData] = useState({
+    // Business Details
+    businessName: '',
+    industry: '',
+    businessAddress: '',
+    website: '',
+    phoneNumber: '',
+    primaryEmail: '',
+    
+    // Business Hours
+    mondayHours: '',
+    tuesdayHours: '',
+    wednesdayHours: '',
+    thursdayHours: '',
+    fridayHours: '',
+    saturdayHours: '',
+    sundayHours: '',
+    afterHoursHandling: '',
+    holidayOption: '',
+    country: 'US',
+    customHolidays: '',
+    
+    // Phone Setup
+    hasBusinessPhone: '',
+    forwardCalls: '',
+    needNewNumber: '',
+    preferredAreaCode: '',
+    twilioAccountSid: '',
+    twilioAuthToken: '',
+    selectedPhoneNumber: '',
+    
+    // Call Routing
+    departments: [{ name: '', extension: '' }],
+    wantCallMenu: '',
+    ivrMenu: {
+      enabled: false,
+      welcomeMessage: '',
+      menuItems: [
+        { id: 1, key: '1', label: '', action: 'transfer', target: '', subMenu: [] }
+      ]
+    },
+    
+    // Booking & Calendar
+    enableBooking: '',
+    calendarType: '',
+    bookingServices: [{ name: '', duration: '', description: '' }],
+    bookingInfo: '',
+    
+    // Voice Preferences
+    tone: '',
+    voiceGender: '',
+    accent: '',
+    additionalLanguages: '',
+    languageList: '',
+    
+    // Additional
+    specialInstructions: ''
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [availableNumbers, setAvailableNumbers] = useState([]);
+  const [searchingNumbers, setSearchingNumbers] = useState(false);
+  const [searchAreaCode, setSearchAreaCode] = useState('');
+  const [twilioError, setTwilioError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
+  const [saveMessage, setSaveMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Country options
+  const countries = [
+    { code: 'US', name: 'United States' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'FR', name: 'France' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'NL', name: 'Netherlands' },
+    { code: 'BE', name: 'Belgium' },
+    { code: 'CH', name: 'Switzerland' },
+    { code: 'AT', name: 'Austria' },
+    { code: 'SE', name: 'Sweden' },
+    { code: 'NO', name: 'Norway' },
+    { code: 'DK', name: 'Denmark' },
+    { code: 'FI', name: 'Finland' },
+    { code: 'IE', name: 'Ireland' },
+    { code: 'PT', name: 'Portugal' },
+    { code: 'GR', name: 'Greece' },
+    { code: 'PL', name: 'Poland' },
+    { code: 'CZ', name: 'Czech Republic' },
+    { code: 'HU', name: 'Hungary' },
+    { code: 'RO', name: 'Romania' },
+    { code: 'BG', name: 'Bulgaria' },
+    { code: 'HR', name: 'Croatia' },
+    { code: 'SI', name: 'Slovenia' },
+    { code: 'SK', name: 'Slovakia' },
+    { code: 'EE', name: 'Estonia' },
+    { code: 'LV', name: 'Latvia' },
+    { code: 'LT', name: 'Lithuania' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'KR', name: 'South Korea' },
+    { code: 'CN', name: 'China' },
+    { code: 'IN', name: 'India' },
+    { code: 'SG', name: 'Singapore' },
+    { code: 'HK', name: 'Hong Kong' },
+    { code: 'TW', name: 'Taiwan' },
+    { code: 'TH', name: 'Thailand' },
+    { code: 'MY', name: 'Malaysia' },
+    { code: 'ID', name: 'Indonesia' },
+    { code: 'PH', name: 'Philippines' },
+    { code: 'VN', name: 'Vietnam' },
+    { code: 'NZ', name: 'New Zealand' },
+    { code: 'ZA', name: 'South Africa' },
+    { code: 'BR', name: 'Brazil' },
+    { code: 'MX', name: 'Mexico' },
+    { code: 'AR', name: 'Argentina' },
+    { code: 'CL', name: 'Chile' },
+    { code: 'CO', name: 'Colombia' },
+    { code: 'PE', name: 'Peru' },
+    { code: 'VE', name: 'Venezuela' },
+    { code: 'UY', name: 'Uruguay' },
+    { code: 'PY', name: 'Paraguay' },
+    { code: 'BO', name: 'Bolivia' },
+    { code: 'EC', name: 'Ecuador' },
+    { code: 'OTHER', name: 'Other' }
+  ];
+
+  // Popular area codes for quick selection
+  const popularAreaCodes = [
+    { code: '212', location: 'New York, NY', country: 'US' },
+    { code: '213', location: 'Los Angeles, CA', country: 'US' },
+    { code: '312', location: 'Chicago, IL', country: 'US' },
+    { code: '415', location: 'San Francisco, CA', country: 'US' },
+    { code: '617', location: 'Boston, MA', country: 'US' },
+    { code: '202', location: 'Washington, DC', country: 'US' },
+    { code: '305', location: 'Miami, FL', country: 'US' },
+    { code: '404', location: 'Atlanta, GA', country: 'US' },
+    { code: '416', location: 'Toronto, ON', country: 'CA' },
+    { code: '604', location: 'Vancouver, BC', country: 'CA' },
+    { code: '514', location: 'Montreal, QC', country: 'CA' },
+    { code: '020', location: 'London', country: 'GB' },
+    { code: '061', location: 'Manchester', country: 'GB' },
+    { code: '02', location: 'Sydney', country: 'AU' },
+    { code: '03', location: 'Melbourne', country: 'AU' },
+    { code: '30', location: 'Berlin', country: 'DE' },
+    { code: '1', location: 'Paris', country: 'FR' }
+  ];
+
+  // Time options for business hours
+  const timeOptions = [
+    'Closed',
+    '6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM',
+    '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+    '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+    '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM',
+    '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM',
+    '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM'
+  ];
+
+  // Load existing setup data on component mount
+  useEffect(() => {
+    const loadSetupData = async () => {
+      if (user) {
+        try {
+          const docRef = doc(db, 'setupConfigurations', user.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setFormData(prev => ({
+              ...prev,
+              ...data.formData
+            }));
+            if (data.currentStep) {
+              setCurrentStep(data.currentStep);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading setup data:', error);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadSetupData();
+  }, [user]);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear validation error when field is updated
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const handleHoursChange = (day, type, value) => {
+    const currentHours = formData[`${day}Hours`];
+    if (value === 'Closed') {
+      handleChange(`${day}Hours`, 'Closed');
+    } else {
+      if (type === 'open') {
+        const closingTime = currentHours.includes(' - ') ? currentHours.split(' - ')[1] : '';
+        handleChange(`${day}Hours`, closingTime ? `${value} - ${closingTime}` : value);
+      } else {
+        const openingTime = currentHours.includes(' - ') ? currentHours.split(' - ')[0] : currentHours;
+        handleChange(`${day}Hours`, openingTime ? `${openingTime} - ${value}` : value);
+      }
+    }
+  };
+
+  const getOpeningTime = (dayHours) => {
+    if (dayHours === 'Closed') return 'Closed';
+    return dayHours.includes(' - ') ? dayHours.split(' - ')[0] : dayHours;
+  };
+
+  const getClosingTime = (dayHours) => {
+    if (dayHours === 'Closed') return 'Closed';
+    return dayHours.includes(' - ') ? dayHours.split(' - ')[1] : '';
+  };
+
+  // Twilio phone number search
+  const searchPhoneNumbers = async (areaCode, country = 'US') => {
+    if (!formData.twilioAccountSid || !formData.twilioAuthToken) {
+      setTwilioError('Please enter your Twilio credentials first');
+      return;
+    }
+
+    setSearchingNumbers(true);
+    setTwilioError('');
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/search-phone-numbers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accountSid: formData.twilioAccountSid,
+          authToken: formData.twilioAuthToken,
+          areaCode: areaCode,
+          country: country
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAvailableNumbers(data.numbers);
+        setSearchingNumbers(false);
+      } else {
+        setTwilioError(data.error || 'Failed to search for phone numbers');
+        setSearchingNumbers(false);
+      }
+    } catch (error) {
+      setTwilioError('Error connecting to server. Please check your credentials and try again.');
+      setSearchingNumbers(false);
+    }
+  };
+
+  const purchasePhoneNumber = async (phoneNumber) => {
+    if (!formData.twilioAccountSid || !formData.twilioAuthToken) {
+      setTwilioError('Please enter your Twilio credentials first');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/purchase-phone-number`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accountSid: formData.twilioAccountSid,
+          authToken: formData.twilioAuthToken,
+          phoneNumber: phoneNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setFormData(prev => ({
+          ...prev,
+          selectedPhoneNumber: data.phoneNumber
+        }));
+        
+        setAvailableNumbers([]);
+        setTwilioError('');
+      } else {
+        setTwilioError(data.error || 'Failed to purchase phone number');
+      }
+    } catch (error) {
+      setTwilioError('Error connecting to server. Please try again.');
+    }
+  };
+
+  // Department management functions
+  const addDepartment = () => {
+    setFormData(prev => ({
+      ...prev,
+      departments: [...prev.departments, { name: '', extension: '' }]
+    }));
+  };
+
+  const removeDepartment = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      departments: prev.departments.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateDepartment = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      departments: prev.departments.map((dept, i) => 
+        i === index ? { ...dept, [field]: value } : dept
+      )
+    }));
+  };
+
+  // Service management functions
+  const addService = () => {
+    setFormData(prev => ({
+      ...prev,
+      bookingServices: [...prev.bookingServices, { name: '', duration: '', description: '' }]
+    }));
+  };
+
+  const removeService = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      bookingServices: prev.bookingServices.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateService = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      bookingServices: prev.bookingServices.map((service, i) => 
+        i === index ? { ...service, [field]: value } : service
+      )
+    }));
+  };
+
+  // IVR Menu management functions
+  const updateIVRMenu = (updates) => {
+    setFormData(prev => ({
+      ...prev,
+      ivrMenu: { ...prev.ivrMenu, ...updates }
+    }));
+  };
+
+  const addMenuItem = (parentId = null) => {
+    const newId = Date.now();
+    const newItem = {
+      id: newId,
+      key: '',
+      label: '',
+      action: 'transfer',
+      target: '',
+      subMenu: []
+    };
+
+    setFormData(prev => {
+      const newMenu = { ...prev.ivrMenu };
+      
+      if (parentId) {
+        // Adding to submenu
+        const findAndAddToParent = (items) => {
+          for (let item of items) {
+            if (item.id === parentId) {
+              item.subMenu.push(newItem);
+              return;
+            }
+            if (item.subMenu.length > 0) {
+              findAndAddToParent(item.subMenu);
+            }
+          }
+        };
+        findAndAddToParent(newMenu.menuItems);
+      } else {
+        // Adding to main menu
+        newMenu.menuItems.push(newItem);
+      }
+
+      return { ...prev, ivrMenu: newMenu };
+    });
+  };
+
+  const removeMenuItem = (itemId) => {
+    setFormData(prev => {
+      const newMenu = { ...prev.ivrMenu };
+      
+      const removeFromItems = (items) => {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].id === itemId) {
+            items.splice(i, 1);
+            return;
+          }
+          if (items[i].subMenu.length > 0) {
+            removeFromItems(items[i].subMenu);
+          }
+        }
+      };
+      
+      removeFromItems(newMenu.menuItems);
+      return { ...prev, ivrMenu: newMenu };
+    });
+  };
+
+  const updateMenuItem = (itemId, field, value) => {
+    setFormData(prev => {
+      const newMenu = { ...prev.ivrMenu };
+      
+      const updateInItems = (items) => {
+        for (let item of items) {
+          if (item.id === itemId) {
+            item[field] = value;
+            return;
+          }
+          if (item.subMenu.length > 0) {
+            updateInItems(item.subMenu);
+          }
+        }
+      };
+      
+      updateInItems(newMenu.menuItems);
+      return { ...prev, ivrMenu: newMenu };
+    });
+  };
+
+  const renderMenuItems = (items, level = 0) => {
+    return items.map((item) => (
+      <div key={item.id} className={`${level > 0 ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
+        <div className="p-4 bg-white border border-gray-200 rounded-lg mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">
+                {level > 0 ? `Submenu Option` : `Menu Option`}
+              </span>
+              {level > 0 && (
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                  Level {level + 1}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => removeMenuItem(item.id)}
+              className="text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Remove
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Key Press *
+              </label>
+              <input
+                type="text"
+                value={item.key}
+                onChange={(e) => updateMenuItem(item.id, 'key', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="1"
+                maxLength="1"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Menu Label *
+              </label>
+              <input
+                type="text"
+                value={item.label}
+                onChange={(e) => updateMenuItem(item.id, 'label', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Sales"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Action *
+              </label>
+              <select
+                value={item.action}
+                onChange={(e) => updateMenuItem(item.id, 'action', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="transfer">Transfer to Department</option>
+                <option value="voicemail">Take Voicemail</option>
+                <option value="submenu">Go to Submenu</option>
+                <option value="message">Play Message</option>
+                <option value="callback">Request Callback</option>
+              </select>
+            </div>
+          </div>
+          
+          {item.action === 'transfer' && (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Transfer to Department
+              </label>
+              <select
+                value={item.target}
+                onChange={(e) => updateMenuItem(item.id, 'target', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Department</option>
+                {formData.departments.map((dept, index) => (
+                  <option key={index} value={dept.name}>
+                    {dept.name} ({dept.extension})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {item.action === 'message' && (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Custom Message
+              </label>
+              <textarea
+                value={item.target}
+                onChange={(e) => updateMenuItem(item.id, 'target', e.target.value)}
+                rows="2"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter the message to play..."
+              />
+            </div>
+          )}
+          
+          {item.action === 'voicemail' && (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Voicemail Department
+              </label>
+              <select
+                value={item.target}
+                onChange={(e) => updateMenuItem(item.id, 'target', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Department</option>
+                {formData.departments.map((dept, index) => (
+                  <option key={index} value={dept.name}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {item.action === 'submenu' && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => addMenuItem(item.id)}
+                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm font-medium"
+              >
+                + Add Submenu Option
+              </button>
+            </div>
+          )}
+          
+          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+            Preview: "Press {item.key} for {item.label}"
+          </div>
+        </div>
+        
+        {item.subMenu.length > 0 && (
+          <div className="ml-4">
+            {renderMenuItems(item.subMenu, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  // Validation functions for each step
+  const validateStep1 = () => {
+    const errors = {};
+    
+    if (!formData.businessName.trim()) {
+      errors.businessName = 'Business name is required';
+    }
+    if (!formData.industry.trim()) {
+      errors.industry = 'Industry is required';
+    }
+    if (!formData.primaryEmail.trim()) {
+      errors.primaryEmail = 'Primary email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.primaryEmail)) {
+      errors.primaryEmail = 'Please enter a valid email address';
+    }
+    
+    return errors;
+  };
+
+  const validateStep2 = () => {
+    const errors = {};
+    
+    if (!formData.afterHoursHandling) {
+      errors.afterHoursHandling = 'Please select after-hours handling option';
+    }
+    if (formData.holidayOption === 'default' && !formData.country) {
+      errors.country = 'Please select your country';
+    }
+    if (formData.holidayOption === 'custom' && !formData.customHolidays.trim()) {
+      errors.customHolidays = 'Please enter custom holidays';
+    }
+    
+    return errors;
+  };
+
+  const validateStep3 = () => {
+    const errors = {};
+    
+    if (!formData.hasBusinessPhone) {
+      errors.hasBusinessPhone = 'Please select if you have a business phone';
+    }
+    if (formData.hasBusinessPhone === 'yes' && !formData.forwardCalls) {
+      errors.forwardCalls = 'Please select call forwarding option';
+    }
+    if (formData.hasBusinessPhone === 'no' && !formData.selectedPhoneNumber) {
+      errors.selectedPhoneNumber = 'Please select a phone number';
+    }
+    
+    return errors;
+  };
+
+  const validateStep4 = () => {
+    const errors = {};
+    
+    // Validate departments
+    formData.departments.forEach((dept, index) => {
+      if (!dept.name.trim()) {
+        errors[`department_${index}_name`] = 'Department name is required';
+      }
+      if (!dept.extension.trim()) {
+        errors[`department_${index}_extension`] = 'Extension is required';
+      }
+    });
+
+    // Validate IVR menu if enabled
+    if (formData.ivrMenu.enabled) {
+      if (!formData.ivrMenu.welcomeMessage.trim()) {
+        errors.ivrWelcomeMessage = 'Welcome message is required';
+      }
+      
+      formData.ivrMenu.menuItems.forEach((item, index) => {
+        if (!item.key.trim()) {
+          errors[`ivr_${index}_key`] = 'Key press is required';
+        }
+        if (!item.label.trim()) {
+          errors[`ivr_${index}_label`] = 'Menu label is required';
+        }
+        if (item.action === 'transfer' && !item.target) {
+          errors[`ivr_${index}_target`] = 'Please select a department';
+        }
+      });
+    }
+    
+    return errors;
+  };
+
+  const validateStep5 = () => {
+    const errors = {};
+    
+    if (!formData.enableBooking) {
+      errors.enableBooking = 'Please select booking option';
+    }
+    if (formData.enableBooking === 'yes') {
+      if (!formData.calendarType) {
+        errors.calendarType = 'Please select calendar type';
+      }
+      
+      formData.bookingServices.forEach((service, index) => {
+        if (!service.name.trim()) {
+          errors[`service_${index}_name`] = 'Service name is required';
+        }
+        if (!service.duration.trim()) {
+          errors[`service_${index}_duration`] = 'Duration is required';
+        }
+      });
+    }
+    
+    return errors;
+  };
+
+  const validateStep6 = () => {
+    const errors = {};
+    
+    if (!formData.tone) {
+      errors.tone = 'Please select a tone';
+    }
+    if (!formData.voiceGender) {
+      errors.voiceGender = 'Please select voice gender';
+    }
+    if (!formData.accent) {
+      errors.accent = 'Please select an accent';
+    }
+    if (formData.additionalLanguages === 'yes' && !formData.languageList.trim()) {
+      errors.languageList = 'Please list additional languages';
+    }
+    
+    return errors;
+  };
+
+  const validateCurrentStep = () => {
+    let errors = {};
+    
+    switch (currentStep) {
+      case 1:
+        errors = validateStep1();
+        break;
+      case 2:
+        errors = validateStep2();
+        break;
+      case 3:
+        errors = validateStep3();
+        break;
+      case 4:
+        errors = validateStep4();
+        break;
+      case 5:
+        errors = validateStep5();
+        break;
+      case 6:
+        errors = validateStep6();
+        break;
+      default:
+        break;
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Auto-save to Firestore
+  const saveToFirestore = useCallback(async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const docRef = doc(db, 'setupConfigurations', user.uid);
+      await setDoc(docRef, {
+        formData,
+        currentStep,
+        lastUpdated: serverTimestamp(),
+        userId: user.uid,
+        userEmail: user.email
+      }, { merge: true });
+      
+      setSaveMessage('Changes saved automatically');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Error saving to Firestore:', error);
+      setSaveMessage('Error saving changes');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+    setIsSaving(false);
+  }, [user, formData, currentStep]);
+
+  // Save on step change and form data change
+  useEffect(() => {
+    if (user && !isLoading) {
+      const timeoutId = setTimeout(() => {
+        saveToFirestore();
+      }, 1000); // Auto-save after 1 second of inactivity
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, currentStep, user, isLoading, saveToFirestore]);
+
+  const handleNextStep = () => {
+    if (validateCurrentStep()) {
+      setCurrentStep(Math.min(7, currentStep + 1));
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(Math.max(1, currentStep - 1));
+  };
+
+  const handleSubmit = async () => {
+    if (!validateCurrentStep()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Final save to Firestore
+      await saveToFirestore();
+      
+      // Mark setup as complete
+      const docRef = doc(db, 'setupConfigurations', user.uid);
+      await setDoc(docRef, {
+        formData,
+        currentStep,
+        setupCompleted: true,
+        completedAt: serverTimestamp(),
+        userId: user.uid,
+        userEmail: user.email
+      }, { merge: true });
+      
+      console.log('Setup completed and saved:', formData);
+      onComplete();
+    } catch (error) {
+      console.error('Error completing setup:', error);
+      setSaveMessage('Error completing setup. Please try again.');
+    }
+    
+    setIsSubmitting(false);
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your setup...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const steps = [
+    { id: 1, title: 'Business Details', icon: '🏢' },
+    { id: 2, title: 'Hours & Availability', icon: '🕐' },
+    { id: 3, title: 'Phone Setup', icon: '☎️' },
+    { id: 4, title: 'Call Routing', icon: '👥' },
+    { id: 5, title: 'Booking & Calendar', icon: '📅' },
+    { id: 6, title: 'Voice & Language', icon: '🔊' },
+    { id: 7, title: 'Final Setup', icon: '⚙️' }
+  ];
+
+  // Helper function to display validation errors
+  const renderError = (fieldName) => {
+    if (validationErrors[fieldName]) {
+      return (
+        <div className="text-red-600 text-sm mt-1 flex items-center bg-red-50 p-2 rounded-lg border border-red-200">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          {validationErrors[fieldName]}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Helper function to get input classes with error state
+  const getInputClasses = (fieldName) => {
+    const baseClasses = "w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 text-gray-900 placeholder-gray-500 transition-all duration-200";
+    const errorClasses = validationErrors[fieldName] 
+      ? "border-red-500 focus:ring-red-500 focus:border-red-500" 
+      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500";
+    return `${baseClasses} ${errorClasses}`;
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-sm">
+                <span className="text-2xl">🏢</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Business Details</h2>
+              <p className="text-gray-600">Tell us about your business so we can personalize your AI receptionist</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Business Name *</label>
+                <input
+                  type="text"
+                  value={formData.businessName}
+                  onChange={(e) => handleChange('businessName', e.target.value)}
+                  className={getInputClasses('businessName')}
+                  placeholder="Enter your business name"
+                />
+                {renderError('businessName')}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Industry / Type of Business *</label>
+                <input
+                  type="text"
+                  value={formData.industry}
+                  onChange={(e) => handleChange('industry', e.target.value)}
+                  className={getInputClasses('industry')}
+                  placeholder="e.g., Healthcare, Legal, Retail"
+                />
+                {renderError('industry')}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
+              <textarea
+                value={formData.businessAddress}
+                onChange={(e) => handleChange('businessAddress', e.target.value)}
+                rows="3"
+                className={getInputClasses('businessAddress')}
+                placeholder="Enter your business address"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                <input
+                  type="url"
+                  value={formData.website}
+                  onChange={(e) => handleChange('website', e.target.value)}
+                  className={getInputClasses('website')}
+                  placeholder="https://yourwebsite.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Existing Business Phone Number</label>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleChange('phoneNumber', e.target.value)}
+                  className={getInputClasses('phoneNumber')}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Primary Contact Email *</label>
+              <input
+                type="email"
+                value={formData.primaryEmail}
+                onChange={(e) => handleChange('primaryEmail', e.target.value)}
+                className={getInputClasses('primaryEmail')}
+                placeholder="contact@yourbusiness.com"
+              />
+              {renderError('primaryEmail')}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">🕐 Business Hours & Availability</h2>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">Opening & Closing Hours</h3>
+              
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                <div key={day} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+                  <label className="text-sm font-medium text-gray-700">{day}:</label>
+                  
+                  <select
+                    value={getOpeningTime(formData[`${day.toLowerCase()}Hours`])}
+                    onChange={(e) => handleHoursChange(day.toLowerCase(), 'open', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select opening time</option>
+                    {timeOptions.map(time => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                  
+                  {getOpeningTime(formData[`${day.toLowerCase()}Hours`]) !== 'Closed' && (
+                    <>
+                      <span className="text-center text-gray-500">to</span>
+                      <select
+                        value={getClosingTime(formData[`${day.toLowerCase()}Hours`])}
+                        onChange={(e) => handleHoursChange(day.toLowerCase(), 'close', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select closing time</option>
+                        {timeOptions.filter(time => time !== 'Closed').map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                  
+                  {getOpeningTime(formData[`${day.toLowerCase()}Hours`]) === 'Closed' && (
+                    <span className="col-span-2 text-gray-500 italic">Closed</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Should the AI handle after-hours calls with voicemail? *</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="afterHours"
+                    value="yes"
+                    checked={formData.afterHoursHandling === 'yes'}
+                    onChange={(e) => handleChange('afterHoursHandling', e.target.value)}
+                    className="mr-2"
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="afterHours"
+                    value="no"
+                    checked={formData.afterHoursHandling === 'no'}
+                    onChange={(e) => handleChange('afterHoursHandling', e.target.value)}
+                    className="mr-2"
+                  />
+                  No
+                </label>
+              </div>
+              {renderError('afterHoursHandling')}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Holidays / Closures</label>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="holidays"
+                    value="default"
+                    checked={formData.holidayOption === 'default'}
+                    onChange={(e) => handleChange('holidayOption', e.target.value)}
+                    className="mr-2"
+                  />
+                  Use default public holidays for my country
+                </label>
+                {formData.holidayOption === 'default' && (
+                  <div className="ml-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Country:</label>
+                    <select
+                      value={formData.country}
+                      onChange={(e) => handleChange('country', e.target.value)}
+                      className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select your country</option>
+                      {countries.map(country => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="holidays"
+                    value="custom"
+                    checked={formData.holidayOption === 'custom'}
+                    onChange={(e) => handleChange('holidayOption', e.target.value)}
+                    className="mr-2"
+                  />
+                  Custom list of holidays / closures
+                </label>
+                {formData.holidayOption === 'custom' && (
+                  <textarea
+                    value={formData.customHolidays}
+                    onChange={(e) => handleChange('customHolidays', e.target.value)}
+                    rows="3"
+                    className="ml-6 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Dec 24 – Christmas Eve; Aug 5 – Civic Holiday"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">☎️ Phone Setup</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Do you already have a business phone number? *</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="hasPhone"
+                    value="yes"
+                    checked={formData.hasBusinessPhone === 'yes'}
+                    onChange={(e) => handleChange('hasBusinessPhone', e.target.value)}
+                    className="mr-2"
+                  />
+                  Yes - I have an existing phone number
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="hasPhone"
+                    value="no"
+                    checked={formData.hasBusinessPhone === 'no'}
+                    onChange={(e) => handleChange('hasBusinessPhone', e.target.value)}
+                    className="mr-2"
+                  />
+                  No - I need a new phone number
+                </label>
+              </div>
+              {renderError('hasBusinessPhone')}
+            </div>
+
+            {formData.hasBusinessPhone === 'yes' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Do you want to forward calls to the AI receptionist?</label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="forwardCalls"
+                      value="yes"
+                      checked={formData.forwardCalls === 'yes'}
+                      onChange={(e) => handleChange('forwardCalls', e.target.value)}
+                      className="mr-2"
+                    />
+                    Yes - Forward my existing number
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="forwardCalls"
+                      value="no"
+                      checked={formData.forwardCalls === 'no'}
+                      onChange={(e) => handleChange('forwardCalls', e.target.value)}
+                      className="mr-2"
+                    />
+                    No - Keep my existing number separate
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {formData.hasBusinessPhone === 'no' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-2">🎯 Get a New Phone Number with Twilio</h3>
+                  <p className="text-sm text-blue-800">
+                    We'll help you find and purchase a new phone number using Twilio. 
+                    You'll need your Twilio Account SID and Auth Token.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Twilio Account SID *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.twilioAccountSid}
+                      onChange={(e) => handleChange('twilioAccountSid', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="AC..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Twilio Auth Token *
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.twilioAuthToken}
+                      onChange={(e) => handleChange('twilioAuthToken', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="••••••••••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Search for Phone Numbers
+                  </label>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Country
+                        </label>
+                        <select
+                          value={formData.country}
+                          onChange={(e) => handleChange('country', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="US">United States</option>
+                          <option value="CA">Canada</option>
+                          <option value="GB">United Kingdom</option>
+                          <option value="AU">Australia</option>
+                          <option value="DE">Germany</option>
+                          <option value="FR">France</option>
+                          <option value="NL">Netherlands</option>
+                          <option value="IT">Italy</option>
+                          <option value="ES">Spain</option>
+                          <option value="SE">Sweden</option>
+                          <option value="SG">Singapore</option>
+                          <option value="HK">Hong Kong</option>
+                          <option value="JP">Japan</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Area Code
+                        </label>
+                        <input
+                          type="text"
+                          value={searchAreaCode}
+                          onChange={(e) => setSearchAreaCode(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="212, 415, etc."
+                          maxLength="5"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => searchPhoneNumbers(searchAreaCode, formData.country)}
+                          disabled={!searchAreaCode || searchingNumbers}
+                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {searchingNumbers ? 'Searching...' : 'Search'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Popular Area Codes</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {popularAreaCodes
+                          .filter(area => area.country === formData.country || formData.country === '')
+                          .map(area => (
+                            <button
+                              key={area.code}
+                              type="button"
+                              onClick={() => {
+                                setSearchAreaCode(area.code);
+                                searchPhoneNumbers(area.code, formData.country);
+                              }}
+                              className="p-2 text-left bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+                            >
+                              <div className="font-medium">{area.code}</div>
+                              <div className="text-xs text-gray-600">{area.location}</div>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {twilioError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                    {twilioError}
+                  </div>
+                )}
+
+                {availableNumbers.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Available Phone Numbers</h4>
+                    <div className="space-y-2">
+                      {availableNumbers.map(number => (
+                        <div key={number.phoneNumber} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">{number.friendlyName}</div>
+                            <div className="text-sm text-gray-600">
+                              {number.locality}, {number.region} • 
+                              {number.capabilities.includes('voice') && ' Voice'}
+                              {number.capabilities.includes('sms') && ' SMS'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => purchasePhoneNumber(number.phoneNumber)}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {formData.selectedPhoneNumber && (
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-2">✅ Phone Number Selected</h4>
+                    <p className="text-green-800">
+                      Selected: <span className="font-medium">{formData.selectedPhoneNumber}</span>
+                    </p>
+                    <p className="text-sm text-green-700 mt-1">
+                      This number will be configured for your AI voice receptionist.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Call Routing & Extensions</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                Departments / Team Members for Call Transfers
+              </label>
+              
+              <div className="space-y-4">
+                {formData.departments.map((dept, index) => (
+                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-700">
+                        Department {index + 1}
+                      </h4>
+                      {formData.departments.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeDepartment(index)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Department Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={dept.name}
+                          onChange={(e) => updateDepartment(index, 'name', e.target.value)}
+                          className={getInputClasses(`department_${index}_name`)}
+                          placeholder="e.g., Sales, Support, Manager"
+                        />
+                        {renderError(`department_${index}_name`)}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Extension / Phone Number *
+                        </label>
+                        <input
+                          type="text"
+                          value={dept.extension}
+                          onChange={(e) => updateDepartment(index, 'extension', e.target.value)}
+                          className={getInputClasses(`department_${index}_extension`)}
+                          placeholder="e.g., Ext. 102, 555-123-4567"
+                        />
+                        {renderError(`department_${index}_extension`)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={addDepartment}
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  + Add Another Department
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">Interactive Voice Response (IVR) Menu</label>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="ivrEnabled"
+                      value="no"
+                      checked={!formData.ivrMenu.enabled}
+                      onChange={(e) => updateIVRMenu({ enabled: false })}
+                      className="mr-2"
+                    />
+                    No call menu - Route calls directly to AI receptionist
+                  </label>
+                </div>
+                
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="ivrEnabled"
+                      value="yes"
+                      checked={formData.ivrMenu.enabled}
+                      onChange={(e) => updateIVRMenu({ enabled: true })}
+                      className="mr-2"
+                    />
+                    Yes - Set up call menu with options
+                  </label>
+                </div>
+                
+                {formData.ivrMenu.enabled && (
+                  <div className="ml-6 space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Welcome Message
+                      </label>
+                      <textarea
+                        value={formData.ivrMenu.welcomeMessage}
+                        onChange={(e) => updateIVRMenu({ welcomeMessage: e.target.value })}
+                        rows="2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., Thank you for calling ABC Company. Please listen to the following options..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-medium text-gray-700">Menu Options</h4>
+                        <button
+                          type="button"
+                          onClick={() => addMenuItem()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                        >
+                          + Add Menu Option
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {renderMenuItems(formData.ivrMenu.menuItems)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">📅 Booking & Calendar Integration</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Should the AI be able to book appointments? *</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="booking"
+                    value="yes"
+                    checked={formData.enableBooking === 'yes'}
+                    onChange={(e) => handleChange('enableBooking', e.target.value)}
+                    className="mr-2"
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="booking"
+                    value="no"
+                    checked={formData.enableBooking === 'no'}
+                    onChange={(e) => handleChange('enableBooking', e.target.value)}
+                    className="mr-2"
+                  />
+                  No
+                </label>
+              </div>
+              {renderError('enableBooking')}
+            </div>
+
+            {formData.enableBooking === 'yes' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Connect your calendar</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="calendar"
+                        value="google"
+                        checked={formData.calendarType === 'google'}
+                        onChange={(e) => handleChange('calendarType', e.target.value)}
+                        className="mr-2"
+                      />
+                      Google Calendar
+                      <button className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                        Connect Google Calendar
+                      </button>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="calendar"
+                        value="calendly"
+                        checked={formData.calendarType === 'calendly'}
+                        onChange={(e) => handleChange('calendarType', e.target.value)}
+                        className="mr-2"
+                      />
+                      Calendly
+                      <button className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                        Connect Calendly
+                      </button>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="calendar"
+                        value="other"
+                        checked={formData.calendarType === 'other'}
+                        onChange={(e) => handleChange('calendarType', e.target.value)}
+                        className="mr-2"
+                      />
+                      Other - specify:
+                      <input
+                        type="text"
+                        className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        placeholder="Calendar type"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Services Available for Booking
+                  </label>
+                  
+                  <div className="space-y-4">
+                    {formData.bookingServices.map((service, index) => (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Service {index + 1}
+                          </h4>
+                          {formData.bookingServices.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeService(index)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Service Name *
+                            </label>
+                            <input
+                              type="text"
+                              value={service.name}
+                              onChange={(e) => updateService(index, 'name', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g., Consultation"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Duration *
+                            </label>
+                            <input
+                              type="text"
+                              value={service.duration}
+                              onChange={(e) => updateService(index, 'duration', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g., 30 minutes"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description
+                            </label>
+                            <input
+                              type="text"
+                              value={service.description}
+                              onChange={(e) => updateService(index, 'description', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g., Initial consultation"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={addService}
+                      className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                    >
+                      + Add Another Service
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Information the AI should collect before booking
+                  </label>
+                  <textarea
+                    value={formData.bookingInfo}
+                    onChange={(e) => handleChange('bookingInfo', e.target.value)}
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., name, phone number, reason for appointment, preferred date/time"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        );
+
+      case 6:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">🔊 Voice, Accent & Language Preferences</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tone *</label>
+              <div className="space-y-2">
+                {['Friendly', 'Professional', 'Casual'].map(tone => (
+                  <label key={tone} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="tone"
+                      value={tone.toLowerCase()}
+                      checked={formData.tone === tone.toLowerCase()}
+                      onChange={(e) => handleChange('tone', e.target.value)}
+                      className="mr-2"
+                    />
+                    {tone}
+                  </label>
+                ))}
+              </div>
+              {renderError('tone')}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Voice Gender *</label>
+              <div className="space-y-2">
+                {['Male', 'Female', 'No preference'].map(gender => (
+                  <label key={gender} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value={gender.toLowerCase()}
+                      checked={formData.voiceGender === gender.toLowerCase()}
+                      onChange={(e) => handleChange('voiceGender', e.target.value)}
+                      className="mr-2"
+                    />
+                    {gender}
+                  </label>
+                ))}
+              </div>
+              {renderError('voiceGender')}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">English Accent / Locale *</label>
+              <div className="space-y-2">
+                {['US', 'Canadian', 'UK', 'Australian', 'Other'].map(accent => (
+                  <label key={accent} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="accent"
+                      value={accent.toLowerCase()}
+                      checked={formData.accent === accent.toLowerCase()}
+                      onChange={(e) => handleChange('accent', e.target.value)}
+                      className="mr-2"
+                    />
+                    {accent}
+                  </label>
+                ))}
+              </div>
+              {renderError('accent')}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Languages Needed?</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="additionalLanguages"
+                    value="no"
+                    checked={formData.additionalLanguages === 'no'}
+                    onChange={(e) => handleChange('additionalLanguages', e.target.value)}
+                    className="mr-2"
+                  />
+                  No
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="additionalLanguages"
+                    value="yes"
+                    checked={formData.additionalLanguages === 'yes'}
+                    onChange={(e) => handleChange('additionalLanguages', e.target.value)}
+                    className="mr-2"
+                  />
+                  Yes
+                </label>
+              </div>
+              {formData.additionalLanguages === 'yes' && (
+                <input
+                  type="text"
+                  value={formData.languageList}
+                  onChange={(e) => handleChange('languageList', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="List languages (e.g., Spanish, French, German)"
+                />
+              )}
+            </div>
+          </div>
+        );
+
+      case 7:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">⚙️ Final Setup</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Special instructions, integrations, or scripts the AI should follow
+              </label>
+              <textarea
+                value={formData.specialInstructions}
+                onChange={(e) => handleChange('specialInstructions', e.target.value)}
+                rows="6"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Any specific instructions for how the AI should handle calls, special procedures, integrations with other systems, or custom scripts..."
+              />
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">Setup Summary</h3>
+              <p className="text-sm text-blue-800">
+                Once you submit this form, our team will configure your AI voice receptionist 
+                according to your specifications. You'll receive a confirmation email with 
+                setup details and next steps within 24 hours.
+              </p>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+          {/* Header */}
+          <div className="bg-blue-600 text-white p-8">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center shadow-sm">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold mb-4 text-center">AI Voice Receptionist Setup</h1>
+            <p className="text-blue-100 text-center max-w-2xl mx-auto">
+              Configure your AI receptionist to handle calls, bookings, and transfers exactly how your business needs
+            </p>
+          </div>
+
+          {/* Progress Steps */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-wrap justify-between items-center">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
+                    currentStep === step.id 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : currentStep > step.id 
+                        ? 'bg-green-600 text-white shadow-sm' 
+                        : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {currentStep > step.id ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span>{step.icon}</span>
+                    )}
+                  </div>
+                  <span className="ml-2 text-sm font-medium text-gray-700 hidden md:block">
+                    {step.title}
+                  </span>
+                  {index < steps.length - 1 && (
+                    <div className={`w-8 h-0.5 mx-2 rounded-full hidden md:block transition-all duration-300 ${
+                      currentStep > step.id ? 'bg-green-500' : 'bg-gray-300'
+                    }`}></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Form Content */}
+          <div className="p-6">
+            <div className="max-w-3xl mx-auto">
+              {renderStep()}
+            </div>
+          </div>
+
+          {/* Auto-save indicator */}
+          {saveMessage && (
+            <div className="px-6 py-3 bg-green-50 border-b border-green-200">
+              <div className="flex items-center justify-center">
+                <div className="flex-shrink-0">
+                  {isSaving ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                  ) : (
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700 font-medium">{saveMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-t border-gray-200">
+            <button
+              onClick={handlePrevStep}
+              disabled={currentStep === 1}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
+            >
+              Previous
+            </button>
+
+            <div className="text-center">
+              <span className="text-sm text-gray-700 font-medium">
+                Step {currentStep} of {steps.length}
+              </span>
+              {isSaving && (
+                <div className="text-xs text-gray-500 mt-1 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-500 mr-2"></div>
+                  Auto-saving...
+                </div>
+              )}
+            </div>
+
+            {currentStep < steps.length ? (
+              <button
+                onClick={handleNextStep}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
+              >
+                Next Step
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Completing Setup...
+                  </div>
+                ) : (
+                  'Complete Setup'
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SetupGuide; 
