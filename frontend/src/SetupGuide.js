@@ -238,11 +238,6 @@ const SetupGuide = ({ onComplete }) => {
 
   // Twilio phone number search with enhanced error handling
   const searchPhoneNumbers = async (areaCode, country = 'US') => {
-    if (!formData.twilioAccountSid || !formData.twilioAuthToken) {
-      setTwilioError('Please enter your Twilio Account SID and Auth Token first');
-      return;
-    }
-
     if (!areaCode || areaCode.length < 3) {
       setTwilioError('Please enter a valid area code (3+ digits)');
       return;
@@ -264,8 +259,6 @@ const SetupGuide = ({ onComplete }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          accountSid: formData.twilioAccountSid,
-          authToken: formData.twilioAuthToken,
           areaCode: areaCode.toString(),
           country: country
         })
@@ -283,7 +276,7 @@ const SetupGuide = ({ onComplete }) => {
           setTwilioError(`No phone numbers available for area code ${areaCode} in ${country}. Try a different area code.`);
         }
       } else {
-        setTwilioError(data.error || 'Failed to search for phone numbers. Please check your Twilio credentials.');
+        setTwilioError(data.error || 'Failed to search for phone numbers. Server configuration may be needed.');
       }
     } catch (error) {
       console.error('Phone number search error:', error);
@@ -294,10 +287,6 @@ const SetupGuide = ({ onComplete }) => {
   };
 
   const purchasePhoneNumber = async (phoneNumber) => {
-    if (!formData.twilioAccountSid || !formData.twilioAuthToken) {
-      setTwilioError('Please enter your Twilio credentials first');
-      return;
-    }
 
     // Add loading state for the specific number being purchased
     const purchasingButton = document.querySelector(`button[onclick*="${phoneNumber}"]`);
@@ -318,8 +307,6 @@ const SetupGuide = ({ onComplete }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          accountSid: formData.twilioAccountSid,
-          authToken: formData.twilioAuthToken,
           phoneNumber: phoneNumber
         })
       });
@@ -1261,48 +1248,12 @@ const SetupGuide = ({ onComplete }) => {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-blue-900 mb-3">Get a New Phone Number with Twilio</h3>
+                      <h3 className="text-xl font-bold text-blue-900 mb-3">Get a New Phone Number</h3>
                       <p className="text-blue-800 leading-relaxed">
-                        We'll help you find and purchase a new phone number using Twilio. 
-                        You'll need your Twilio Account SID and Auth Token from your 
-                        <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline ml-1">
-                          Twilio Console
-                        </a>.
+                        Search and purchase a phone number for your AI voice receptionist. 
+                        The number will be automatically configured and ready to receive calls 
+                        with intelligent responses and routing.
                       </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-slate-800 tracking-wide">
-                      Twilio Account SID *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={formData.twilioAccountSid}
-                        onChange={(e) => handleChange('twilioAccountSid', e.target.value)}
-                        className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono text-sm"
-                        placeholder="AC********************************"
-                      />
-                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-slate-800 tracking-wide">
-                      Twilio Auth Token *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        value={formData.twilioAuthToken}
-                        onChange={(e) => handleChange('twilioAuthToken', e.target.value)}
-                        className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft font-mono text-sm"
-                        placeholder="********************************"
-                      />
-                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5 pointer-events-none"></div>
                     </div>
                   </div>
                 </div>
@@ -1368,7 +1319,7 @@ const SetupGuide = ({ onComplete }) => {
                           <button
                             type="button"
                             onClick={() => searchPhoneNumbers(searchAreaCode, formData.country)}
-                            disabled={!searchAreaCode || searchAreaCode.length < 3 || searchingNumbers || !formData.twilioAccountSid || !formData.twilioAuthToken}
+                            disabled={!searchAreaCode || searchAreaCode.length < 3 || searchingNumbers}
                             className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
                           >
                             {searchingNumbers ? (

@@ -13,10 +13,14 @@ app.use(express.json());
 
 // Twilio phone number search endpoint
 app.post('/api/search-phone-numbers', async (req, res) => {
-  const { accountSid, authToken, areaCode, country = 'US' } = req.body;
+  const { areaCode, country = 'US' } = req.body;
+
+  // Use Twilio credentials from environment variables
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!accountSid || !authToken) {
-    return res.status(400).json({ error: 'Twilio credentials are required' });
+    return res.status(500).json({ error: 'Twilio credentials not configured on server' });
   }
 
   if (!areaCode) {
@@ -55,10 +59,14 @@ app.post('/api/search-phone-numbers', async (req, res) => {
 
 // Twilio phone number purchase endpoint
 app.post('/api/purchase-phone-number', async (req, res) => {
-  const { accountSid, authToken, phoneNumber } = req.body;
+  const { phoneNumber } = req.body;
+
+  // Use Twilio credentials from environment variables
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!accountSid || !authToken) {
-    return res.status(400).json({ error: 'Twilio credentials are required' });
+    return res.status(500).json({ error: 'Twilio credentials not configured on server' });
   }
 
   if (!phoneNumber) {
