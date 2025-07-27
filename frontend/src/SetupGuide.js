@@ -836,40 +836,23 @@ const SetupGuide = ({ onComplete }) => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-neutral-50 to-accent-50 flex items-center justify-center p-6">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-32 w-80 h-80 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-soft"></div>
-          <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-accent-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-soft" style={{animationDelay: '1s'}}></div>
-        </div>
-        
-        <div className="relative z-10 text-center animate-scale-in">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-white/20 shadow-soft-lg max-w-md mx-auto">
-            {/* Logo/Icon */}
-            <div className="relative mb-8">
-              <div className="w-20 h-20 bg-wealthsimple-gradient rounded-2xl flex items-center justify-center mx-auto shadow-glow transform rotate-3 animate-bounce-gentle">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-6">
+            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
             </div>
-            
-            <div className="space-y-4">
-              <h2 className="text-2xl font-display font-bold text-neutral-900">
-                Preparing Your Setup
-              </h2>
-              <p className="text-neutral-600 font-medium">
-                Loading your setup...
-              </p>
-              
-              {/* Loading bar */}
-              <div className="relative mt-8">
-                <div className="overflow-hidden h-2 text-xs flex rounded-full bg-neutral-200">
-                  <div className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-wealthsimple-gradient rounded-full animate-pulse w-full"></div>
-                </div>
-              </div>
-            </div>
+          </div>
+          <h2 className="text-lg font-medium text-slate-900 mb-2">
+            Loading Setup
+          </h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Preparing your configuration...
+          </p>
+          <div className="w-6 h-6 mx-auto">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-200 border-t-slate-600"></div>
           </div>
         </div>
       </div>
@@ -1818,89 +1801,62 @@ const SetupGuide = ({ onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-neutral-50 to-accent-50 py-8">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-32 w-80 h-80 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-soft"></div>
-        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-accent-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-soft" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-secondary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{animationDelay: '2s'}}></div>
-      </div>
-
-      <div className="relative z-10 max-w-5xl mx-auto px-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-soft-lg overflow-hidden border border-white/20 animate-fade-in">
-          {/* Header */}
-          <div className="bg-wealthsimple-gradient text-white p-10">
-            <div className="flex items-center justify-center mb-8">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-glow transform rotate-3 animate-bounce-gentle">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white">
+          {/* Clean Header */}
+          <div className="border-b border-slate-200 px-8 py-12">
+            <div className="text-center max-w-2xl mx-auto">
+              <div className="mb-6">
+                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto">
+                  <svg className="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-4xl font-display font-bold mb-4">AI Voice Receptionist Setup</h1>
-              <p className="text-white/90 text-lg leading-relaxed">
-                Configure your intelligent AI receptionist to handle calls, bookings, and transfers exactly how your business needs
+              <h1 className="text-3xl font-medium text-slate-900 mb-3">AI Voice Receptionist Setup</h1>
+              <p className="text-slate-600 text-base leading-relaxed">
+                Configure your AI receptionist to handle calls, bookings, and transfers exactly how your business needs
               </p>
             </div>
           </div>
 
-          {/* Progress Steps */}
-          <div className="p-8 border-b border-neutral-200/50">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-neutral-500 tracking-wider uppercase">Progress</span>
-                <span className="text-sm font-medium text-neutral-600">
-                  Step {currentStep} of {steps.length}
-                </span>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="mb-8">
-                <div className="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-success-gradient rounded-full transition-all duration-700 ease-out"
-                    style={{ width: `${(currentStep / steps.length) * 100}%` }}
-                  ></div>
+          {/* Clean Progress */}
+          <div className="px-8 py-6 border-b border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-medium text-slate-500">
+                Step {currentStep} of {steps.length}
+              </span>
+              <span className="text-sm text-slate-600">
+                {Math.round((currentStep / steps.length) * 100)}% complete
+              </span>
+            </div>
+            
+            {/* Simple Progress Bar */}
+            <div className="w-full bg-slate-200 rounded-full h-2 mb-6">
+              <div 
+                className="h-full bg-brand-500 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${(currentStep / steps.length) * 100}%` }}
+              ></div>
+            </div>
+            
+            {/* Clean Step Labels */}
+            <div className="flex justify-between items-center text-xs text-slate-500">
+              {steps.map((step, index) => (
+                <div key={step.id} className={`text-center ${currentStep >= step.id ? 'text-slate-900' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full mx-auto mb-1 ${
+                    currentStep >= step.id ? 'bg-brand-500' : 'bg-slate-300'
+                  }`}></div>
+                  <span className="hidden sm:block">{step.title}</span>
                 </div>
-              </div>
-              
-              {/* Step Indicators */}
-              <div className="grid grid-cols-7 gap-2">
-                {steps.map((step, index) => (
-                  <div key={step.id} className="text-center">
-                    <div className={`mx-auto mb-3 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-medium transition-all duration-300 transform ${
-                      currentStep === step.id 
-                        ? 'bg-wealthsimple-gradient text-white shadow-glow scale-110' 
-                        : currentStep > step.id 
-                          ? 'bg-secondary-500 text-white shadow-soft scale-105' 
-                          : 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300'
-                    }`}>
-                      {currentStep > step.id ? (
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        <span className="text-base">{step.icon}</span>
-                      )}
-                    </div>
-                    <span className={`text-xs font-medium transition-colors duration-300 ${
-                      currentStep >= step.id ? 'text-neutral-900' : 'text-neutral-500'
-                    }`}>
-                      {step.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Form Content */}
           <div className="p-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="animate-slide-up">
-                {renderStep()}
-              </div>
+            <div className="max-w-2xl mx-auto">
+              {renderStep()}
             </div>
           </div>
 
@@ -1924,63 +1880,42 @@ const SetupGuide = ({ onComplete }) => {
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 px-8 py-6 flex justify-between items-center border-t border-neutral-200/50">
+          {/* Clean Navigation */}
+          <div className="bg-slate-50 px-8 py-6 flex justify-between items-center border-t border-slate-200">
             <button
               onClick={handlePrevStep}
               disabled={currentStep === 1}
-              className="group flex items-center px-6 py-3 text-neutral-700 bg-white border-2 border-neutral-200 rounded-2xl hover:border-neutral-300 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold"
+              className="px-4 py-2 text-slate-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
             >
-              <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Previous
+              ← Previous
             </button>
 
             <div className="text-center">
               {isSaving && (
-                <div className="flex items-center justify-center text-sm text-neutral-600 mb-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500 mr-2"></div>
-                  Auto-saving...
+                <div className="flex items-center justify-center text-sm text-slate-600 mb-1">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-200 border-t-slate-600 mr-2"></div>
+                  Saving...
                 </div>
               )}
-              <div className="text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                {currentStep === steps.length ? 'Ready to Complete' : 'In Progress'}
+              <div className="text-xs text-slate-500">
+                Step {currentStep} of {steps.length}
               </div>
             </div>
 
             {currentStep < steps.length ? (
               <button
                 onClick={handleNextStep}
-                className="group flex items-center px-6 py-3 bg-wealthsimple-gradient text-white rounded-2xl font-bold shadow-soft hover:shadow-glow hover:scale-[1.02] transition-all duration-300"
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors duration-200"
               >
-                Next Step
-                <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                Continue
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="group flex items-center px-8 py-3 bg-success-gradient text-white rounded-2xl font-bold shadow-soft hover:shadow-glow hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300"
+                className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Completing Setup...
-                  </>
-                ) : (
-                  <>
-                    Complete Setup
-                    <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </>
-                )}
+                {isSubmitting ? 'Completing...' : 'Complete Setup'}
               </button>
             )}
           </div>
