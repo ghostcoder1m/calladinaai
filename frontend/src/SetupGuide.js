@@ -38,7 +38,7 @@ const SetupGuide = ({ onComplete }) => {
     selectedPhoneNumber: '',
     
     // Call Routing
-    departments: [{ name: '', extension: '' }],
+    departments: [{ name: '', extension: '', voice: null }],
     wantCallMenu: '',
     ivrMenu: {
       enabled: false,
@@ -55,9 +55,10 @@ const SetupGuide = ({ onComplete }) => {
     bookingInfo: '',
     
     // Voice Preferences
-    tone: '',
-    voiceGender: '',
-    accent: '',
+    selectedVoice: null,
+    tone: 'Professional',
+    voiceGender: 'female',
+    accent: 'American',
     additionalLanguages: '',
     languageList: '',
     
@@ -74,9 +75,17 @@ const SetupGuide = ({ onComplete }) => {
   const [twilioError, setTwilioError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
   const [saveMessage, setSaveMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-
+      const [isLoading, setIsLoading] = useState(true);
+  const [purchaseLoading, setPurchaseLoading] = useState(null);
+  const [purchaseError, setPurchaseError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Voice selection state
+  const [availableVoices, setAvailableVoices] = useState({});
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [testingVoice, setTestingVoice] = useState(null);
 
   // Country options
   const countries = [
@@ -238,6 +247,71 @@ const SetupGuide = ({ onComplete }) => {
     return dayHours.includes(' - ') ? dayHours.split(' - ')[1] : '';
   };
 
+  // API URL constant
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+  // Test voice sample
+  const testVoice = async (voice) => {
+    setTestingVoice(voice.voice_id);
+    try {
+      const response = await fetch(`${apiUrl}/api/test-voice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voiceId: voice.voice_id,
+          text: `Hello! I'm ${voice.name}, and I'll be your AI receptionist for ${formData.businessName || 'your business'}. How can I help you today?`
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Play the audio
+        const audio = new Audio(data.audioData);
+        audio.play();
+      }
+    } catch (error) {
+      console.error('Failed to test voice:', error);
+    } finally {
+      setTestingVoice(null);
+    }
+  };
+
+  // Load voices when component mounts
+  useEffect(() => {
+    const loadVoices = async () => {
+      setVoicesLoading(true);
+      try {
+        const response = await fetch(`${apiUrl}/api/voices`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setAvailableVoices(data.voices);
+          
+          // Set default voice if none selected
+          if (!formData.selectedVoice && data.voices.all?.length > 0) {
+            const defaultVoice = data.voices.all.find(v => 
+              v.accent === formData.accent && 
+              v.tone === formData.tone && 
+              v.gender === formData.voiceGender
+            ) || data.voices.all[0];
+            
+            handleChange('selectedVoice', defaultVoice);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load voices:', error);
+        setErrorMessage('Failed to load voices. Please try again later.');
+      } finally {
+        setVoicesLoading(false);
+      }
+    };
+
+    loadVoices();
+  }, []); // Only run once on mount
+
   // Twilio phone number search with enhanced error handling
   const searchPhoneNumbers = async (areaCode, country = 'US') => {
     if (!areaCode || areaCode.length < 3) {
@@ -250,9 +324,6 @@ const SetupGuide = ({ onComplete }) => {
     setAvailableNumbers([]);
     
     try {
-      // Use localhost:3001 as fallback if environment variable is not set
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      
       console.log('Searching phone numbers...', { areaCode, country });
       
       const response = await fetch(`${apiUrl}/api/search-phone-numbers`, {
@@ -288,23 +359,11 @@ const SetupGuide = ({ onComplete }) => {
     }
   };
 
-
-
   const purchasePhoneNumber = async (phoneNumber) => {
-
-    // Add loading state for the specific number being purchased
-    const purchasingButton = document.querySelector(`button[onclick*="${phoneNumber}"]`);
-    if (purchasingButton) {
-      purchasingButton.disabled = true;
-      purchasingButton.textContent = 'Purchasing...';
-    }
+    setPurchaseLoading(phoneNumber);
+    setPurchaseError('');
 
     try {
-      // Use localhost:3001 as fallback if environment variable is not set
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      
-      console.log('Purchasing phone number:', phoneNumber);
-      
       const response = await fetch(`${apiUrl}/api/purchase-phone-number`, {
         method: 'POST',
         headers: {
@@ -315,38 +374,80 @@ const SetupGuide = ({ onComplete }) => {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
+        // Handle successful purchase with automatic webhook configuration
         setFormData(prev => ({
           ...prev,
           selectedPhoneNumber: data.phoneNumber,
-          phoneNumberSid: data.sid,
-          phoneNumberFriendlyName: data.friendlyName
+          purchasedPhoneNumber: data.phoneNumber,
+          webhookConfigured: data.webhookConfigured
         }));
-        
+
+        // Show different messages based on webhook configuration status
+        if (data.webhookConfigured) {
+          setSuccessMessage(`✅ ${data.message}\n🔗 Voice calls will be handled by your AI agent automatically!`);
+        } else {
+          setSuccessMessage(`✅ Phone number purchased: ${data.phoneNumber}\n⚠️ Webhook configuration needed for AI calls.`);
+        }
+
+        // Log webhook details for debugging
+        if (data.webhookUrls) {
+          console.log('🎯 Webhook URLs configured:', data.webhookUrls);
+        }
+
+        // Clear any phone search results since we've made a purchase
         setAvailableNumbers([]);
-        setTwilioError('');
-        
-        // Show success message
-        console.log('Phone number purchased successfully:', data.phoneNumber);
         
       } else {
-        setTwilioError(data.error || 'Failed to purchase phone number. Please check your Twilio account balance and try again.');
+        setPurchaseError(data.error || 'Failed to purchase phone number');
+        setErrorMessage(data.error || 'Failed to purchase phone number');
       }
     } catch (error) {
-      console.error('Phone number purchase error:', error);
-      setTwilioError('Unable to complete purchase. Please check your internet connection and Twilio account status.');
+      console.error('Purchase error:', error);
+      setPurchaseError('Network error. Please try again.');
+      setErrorMessage('Network error while purchasing phone number. Please try again.');
     } finally {
-      // Reset button state
-      if (purchasingButton) {
-        purchasingButton.disabled = false;
-        purchasingButton.textContent = 'Select';
+      setPurchaseLoading(null);
+    }
+  };
+
+  // New function to manually configure webhook for existing numbers
+  const configureWebhook = async (phoneNumber) => {
+    setWebhookLoading(true);
+    setErrorMessage('');
+
+    try {
+      const response = await fetch(`${apiUrl}/api/configure-webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setFormData(prev => ({
+          ...prev,
+          webhookConfigured: true
+        }));
+        
+        setSuccessMessage(`✅ ${data.message}\n🔗 Your phone number is now connected to your AI agent!`);
+        console.log('🎯 Webhook configured:', data.webhookUrls);
+        
+      } else {
+        setErrorMessage(data.error || 'Failed to configure webhook');
       }
+    } catch (error) {
+      console.error('Webhook configuration error:', error);
+      setErrorMessage('Network error while configuring webhook. Please try again.');
+    } finally {
+      setWebhookLoading(false);
     }
   };
 
@@ -354,7 +455,7 @@ const SetupGuide = ({ onComplete }) => {
   const addDepartment = () => {
     setFormData(prev => ({
       ...prev,
-      departments: [...prev.departments, { name: '', extension: '' }]
+      departments: [...prev.departments, { name: '', extension: '', voice: null }]
     }));
   };
 
@@ -685,6 +786,16 @@ const SetupGuide = ({ onComplete }) => {
   const validateStep4 = () => {
     const errors = {};
     
+    if (!formData.selectedVoice) {
+      errors.selectedVoice = 'Please select a voice for your AI agent';
+    }
+    
+    return errors;
+  };
+
+  const validateStep5 = () => {
+    const errors = {};
+    
     // Validate departments
     formData.departments.forEach((dept, index) => {
       if (!dept.name.trim()) {
@@ -692,6 +803,9 @@ const SetupGuide = ({ onComplete }) => {
       }
       if (!dept.extension.trim()) {
         errors[`department_${index}_extension`] = 'Extension is required';
+      }
+      if (!dept.voice) {
+        errors[`department_${index}_voice`] = 'Please select a voice for this department';
       }
     });
 
@@ -717,48 +831,31 @@ const SetupGuide = ({ onComplete }) => {
     return errors;
   };
 
-  const validateStep5 = () => {
+  const validateStep6 = () => {
     const errors = {};
     
-    if (!formData.enableBooking) {
-      errors.enableBooking = 'Please select booking option';
+    if (!formData.additionalLanguages) {
+      errors.additionalLanguages = 'Please select if additional languages are needed';
     }
-    if (formData.enableBooking === 'yes') {
-      if (!formData.calendarType) {
-        errors.calendarType = 'Please select calendar type';
-      }
-      
-      formData.bookingServices.forEach((service, index) => {
-        if (!service.name.trim()) {
-          errors[`service_${index}_name`] = 'Service name is required';
-        }
-        if (!service.duration.trim()) {
-          errors[`service_${index}_duration`] = 'Duration is required';
-        }
-      });
+    if (formData.additionalLanguages === 'yes' && !formData.languageList.trim()) {
+      errors.languageList = 'Please specify which additional languages are needed';
     }
     
     return errors;
   };
 
-  const validateStep6 = () => {
+  const validateStep7 = () => {
     const errors = {};
     
-    if (!formData.tone) {
-      errors.tone = 'Please select a tone';
-    }
-    if (!formData.voiceGender) {
-      errors.voiceGender = 'Please select voice gender';
-    }
-    if (!formData.accent) {
-      errors.accent = 'Please select an accent';
-    }
-    if (formData.additionalLanguages === 'yes' && !formData.languageList.trim()) {
-      errors.languageList = 'Please list additional languages';
-    }
+    // This step is for final review/additional settings
+    // Most validation is now handled in earlier steps
     
     return errors;
   };
+
+
+
+
 
   const validateCurrentStep = () => {
     let errors = {};
@@ -781,6 +878,9 @@ const SetupGuide = ({ onComplete }) => {
         break;
       case 6:
         errors = validateStep6();
+        break;
+      case 7:
+        errors = validateStep7();
         break;
       default:
         break;
@@ -845,10 +945,19 @@ const SetupGuide = ({ onComplete }) => {
       // Final save to Firestore
       await saveToFirestore();
       
-      // Mark setup as complete
+      // Mark setup as complete with voice data
       const docRef = doc(db, 'setupConfigurations', user.uid);
       await setDoc(docRef, {
-        formData,
+        formData: {
+          ...formData,
+          // Ensure voice selection is preserved
+          selectedVoice: formData.selectedVoice,
+          voiceAccent: formData.accent,
+          voiceTone: formData.tone,
+          voiceGender: formData.voiceGender,
+          // Ensure departments with voices are preserved
+          departments: formData.departments
+        },
         currentStep,
         setupCompleted: true,
         completedAt: serverTimestamp(),
@@ -1366,10 +1475,21 @@ const SetupGuide = ({ onComplete }) => {
                             </div>
                             <button
                               type="button"
+                              disabled={purchaseLoading === number.phoneNumber}
                               onClick={() => purchasePhoneNumber(number.phoneNumber)}
-                              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 group-hover:scale-110"
+                              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg hover:scale-105 group-hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center min-w-[140px]"
                             >
-                              Purchase Number
+                              {purchaseLoading === number.phoneNumber ? (
+                                <>
+                                  <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Purchasing...
+                                </>
+                              ) : (
+                                'Purchase Number'
+                              )}
                             </button>
                           </div>
                         </div>
@@ -1378,7 +1498,27 @@ const SetupGuide = ({ onComplete }) => {
                   </div>
                 )}
 
-                {formData.selectedPhoneNumber && (
+                {/* Error Messages */}
+                {(purchaseError || errorMessage) && (
+                  <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-6 animate-slide-down">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-red-900 mb-2">Purchase Error</h4>
+                        <p className="text-red-800">{purchaseError || errorMessage}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Messages */}
+                {successMessage && (
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 animate-slide-down">
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
@@ -1389,13 +1529,69 @@ const SetupGuide = ({ onComplete }) => {
                         </div>
                       </div>
                       <div>
-                        <h4 className="text-lg font-bold text-green-900 mb-2">Phone Number Successfully Acquired!</h4>
-                        <div className="space-y-2">
-                          <p className="text-green-800">
-                            Selected Number: <span className="font-mono font-bold text-lg text-green-900">{formData.selectedPhoneNumber}</span>
+                        <h4 className="text-lg font-bold text-green-900 mb-2">Success!</h4>
+                        <div className="whitespace-pre-line text-green-800">{successMessage}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formData.selectedPhoneNumber && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 animate-slide-down">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                          <span className="text-xl">📞</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-blue-900 mb-2">Your AI Phone Number</h4>
+                        <div className="space-y-3">
+                          <p className="text-blue-800">
+                            Number: <span className="font-mono font-bold text-lg text-blue-900">{formData.selectedPhoneNumber}</span>
                           </p>
-                          <p className="text-sm text-green-700">
-                            🎉 This number is now ready to be configured for your AI voice receptionist. It will handle all incoming calls with intelligent responses and routing.
+                          
+                          {formData.webhookConfigured ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-sm font-semibold text-green-700">🎉 AI Agent Connected & Ready for Calls!</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                                <span className="text-sm font-semibold text-yellow-700">⚠️ Webhook Configuration Needed</span>
+                              </div>
+                              <button
+                                onClick={() => configureWebhook(formData.selectedPhoneNumber)}
+                                disabled={webhookLoading}
+                                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                              >
+                                {webhookLoading ? (
+                                  <>
+                                    <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Configuring...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    Configure AI Agent
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                          
+                          <p className="text-sm text-blue-700">
+                            {formData.webhookConfigured 
+                              ? "✅ Your number is live and will intelligently handle calls, transfers, and bookings."
+                              : "📋 Click 'Configure AI Agent' to activate intelligent call handling."
+                            }
                           </p>
                         </div>
                       </div>
@@ -1408,6 +1604,204 @@ const SetupGuide = ({ onComplete }) => {
         );
 
       case 4:
+        return (
+          <div className="space-y-10">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl mb-6 shadow-soft-lg">
+                <span className="text-3xl">🎤</span>
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Voice Selection</h2>
+              <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mx-auto">
+                Choose the perfect voice for your AI receptionist. Select accent, tone, and personality that matches your brand.
+              </p>
+            </div>
+            
+            {voicesLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading available voices...</p>
+              </div>
+            ) : (
+              <div className="space-y-8 animate-slide-down">
+                {/* Voice Filters */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl border border-purple-100 shadow-soft">
+                  <h3 className="text-xl font-bold text-purple-900 mb-4">Voice Preferences</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-700">Accent</label>
+                      <select
+                        value={formData.accent}
+                        onChange={(e) => handleChange('accent', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                      >
+                        <option value="American">🇺🇸 American</option>
+                        <option value="British">🇬🇧 British</option>
+                        <option value="Australian">🇦🇺 Australian</option>
+                        <option value="Canadian">🇨🇦 Canadian</option>
+                        <option value="Irish">🇮🇪 Irish</option>
+                        <option value="Scottish">🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scottish</option>
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-700">Tone</label>
+                      <select
+                        value={formData.tone}
+                        onChange={(e) => handleChange('tone', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                      >
+                        <option value="Professional">💼 Professional</option>
+                        <option value="Friendly">😊 Friendly</option>
+                        <option value="Authoritative">🎯 Authoritative</option>
+                        <option value="Calm">😌 Calm</option>
+                        <option value="Energetic">⚡ Energetic</option>
+                        <option value="Casual">😎 Casual</option>
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-700">Gender</label>
+                      <select
+                        value={formData.voiceGender}
+                        onChange={(e) => handleChange('voiceGender', e.target.value)}
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft"
+                      >
+                        <option value="female">👩 Female</option>
+                        <option value="male">👨 Male</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Available Voices */}
+                {availableVoices.all && availableVoices.all.length > 0 && (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-bold text-slate-900">Available Voices</h3>
+                    <div className="grid gap-4">
+                      {availableVoices.all
+                        .filter(voice => 
+                          voice.accent === formData.accent && 
+                          voice.tone === formData.tone && 
+                          voice.gender === formData.voiceGender
+                        )
+                        .map((voice, index) => (
+                          <div 
+                            key={voice.voice_id} 
+                            className={`group p-6 bg-white border-2 rounded-xl hover:border-purple-300 hover:shadow-soft transition-all duration-200 ${
+                              formData.selectedVoice?.voice_id === voice.voice_id 
+                                ? 'border-purple-500 shadow-soft-lg bg-purple-50' 
+                                : 'border-slate-200'
+                            }`}
+                            style={{ animationDelay: `${index * 100}ms` }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <div className="text-xl font-bold text-slate-900">
+                                    {voice.name}
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <span className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                                      {voice.accent}
+                                    </span>
+                                    <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                      {voice.tone}
+                                    </span>
+                                    <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                      {voice.gender}
+                                    </span>
+                                  </div>
+                                </div>
+                                {voice.description && (
+                                  <p className="text-sm text-slate-600 mb-3">{voice.description}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-3 ml-6">
+                                <button
+                                  type="button"
+                                  disabled={testingVoice === voice.voice_id}
+                                  onClick={() => testVoice(voice)}
+                                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                  {testingVoice === voice.voice_id ? (
+                                    <>
+                                      <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Playing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-9-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      Test Voice
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleChange('selectedVoice', voice)}
+                                  className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-soft hover:shadow-soft-lg ${
+                                    formData.selectedVoice?.voice_id === voice.voice_id
+                                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white'
+                                      : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                                  }`}
+                                >
+                                  {formData.selectedVoice?.voice_id === voice.voice_id ? '✓ Selected' : 'Select Voice'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                    
+                    {availableVoices.all.filter(voice => 
+                      voice.accent === formData.accent && 
+                      voice.tone === formData.tone && 
+                      voice.gender === formData.voiceGender
+                    ).length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-slate-600">No voices found matching your preferences. Try different filters.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Selected Voice Summary */}
+                {formData.selectedVoice && (
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-purple-900 mb-2">Voice Selected: {formData.selectedVoice.name}</h4>
+                        <div className="space-y-1">
+                          <p className="text-purple-800">
+                            <strong>Accent:</strong> {formData.selectedVoice.accent} | 
+                            <strong> Tone:</strong> {formData.selectedVoice.tone} | 
+                            <strong> Gender:</strong> {formData.selectedVoice.gender}
+                          </p>
+                          <p className="text-sm text-purple-700">
+                            🎉 This voice will be used for all AI phone interactions with your customers.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 5:
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Call Routing & Extensions</h2>
@@ -1435,33 +1829,91 @@ const SetupGuide = ({ onComplete }) => {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Department Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={dept.name}
-                          onChange={(e) => updateDepartment(index, 'name', e.target.value)}
-                          className={getInputClasses(`department_${index}_name`)}
-                          placeholder="e.g., Sales, Support, Manager"
-                        />
-                        {renderError(`department_${index}_name`)}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Department Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={dept.name}
+                            onChange={(e) => updateDepartment(index, 'name', e.target.value)}
+                            className={getInputClasses(`department_${index}_name`)}
+                            placeholder="e.g., Sales, Support, Manager"
+                          />
+                          {renderError(`department_${index}_name`)}
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Extension / Phone Number *
+                          </label>
+                          <input
+                            type="text"
+                            value={dept.extension}
+                            onChange={(e) => updateDepartment(index, 'extension', e.target.value)}
+                            className={getInputClasses(`department_${index}_extension`)}
+                            placeholder="e.g., Ext. 102, 555-123-4567"
+                          />
+                          {renderError(`department_${index}_extension`)}
+                        </div>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Extension / Phone Number *
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Voice for {dept.name || 'this department'} *
                         </label>
-                        <input
-                          type="text"
-                          value={dept.extension}
-                          onChange={(e) => updateDepartment(index, 'extension', e.target.value)}
-                          className={getInputClasses(`department_${index}_extension`)}
-                          placeholder="e.g., Ext. 102, 555-123-4567"
-                        />
-                        {renderError(`department_${index}_extension`)}
+                        <div className="bg-white border border-gray-300 rounded-lg p-3">
+                          {voicesLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                              <span className="text-gray-600">Loading voices...</span>
+                            </div>
+                          ) : availableVoices.all && availableVoices.all.length > 0 ? (
+                            <div className="max-h-40 overflow-y-auto space-y-2">
+                              {availableVoices.all.slice(0, 10).map((voice) => (
+                                <label key={voice.voice_id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`dept_${index}_voice`}
+                                    value={voice.voice_id}
+                                    checked={dept.voice?.voice_id === voice.voice_id}
+                                    onChange={() => updateDepartment(index, 'voice', voice)}
+                                    className="mr-3"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-gray-900">{voice.name}</span>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                          {voice.gender}
+                                        </span>
+                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                          {voice.tone}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          disabled={testingVoice === voice.voice_id}
+                                          onClick={() => testVoice(voice)}
+                                          className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-colors disabled:opacity-50"
+                                        >
+                                          {testingVoice === voice.voice_id ? '▶️' : '🔊'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {voice.description && (
+                                      <p className="text-xs text-gray-600 mt-1">{voice.description}</p>
+                                    )}
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">No voices available. Please check your connection.</p>
+                          )}
+                        </div>
+                        {renderError(`department_${index}_voice`)}
                       </div>
                     </div>
                   </div>
@@ -1547,7 +1999,7 @@ const SetupGuide = ({ onComplete }) => {
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">📅 Booking & Calendar Integration</h2>
@@ -1726,111 +2178,92 @@ const SetupGuide = ({ onComplete }) => {
           </div>
         );
 
-      case 6:
+      case 7:
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">🔊 Voice, Accent & Language Preferences</h2>
+          <div className="space-y-10">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-3xl mb-6 shadow-soft-lg">
+                <span className="text-3xl">🌍</span>
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Additional Languages</h2>
+              <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mx-auto">
+                Configure multilingual support for your AI receptionist to serve customers in their preferred language.
+              </p>
+            </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tone *</label>
-              <div className="space-y-2">
-                {['Friendly', 'Professional', 'Casual'].map(tone => (
-                  <label key={tone} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="tone"
-                      value={tone.toLowerCase()}
-                      checked={formData.tone === tone.toLowerCase()}
-                      onChange={(e) => handleChange('tone', e.target.value)}
-                      className="mr-2"
-                    />
-                    {tone}
-                  </label>
-                ))}
-              </div>
-              {renderError('tone')}
-            </div>
+            <div className="space-y-8 animate-slide-down">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100 shadow-soft">
+                <h3 className="text-xl font-bold text-green-900 mb-4">Language Support</h3>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-3">
+                      Does the AI need to speak additional languages besides English?
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      {['No', 'Yes'].map(option => (
+                        <label key={option} className="flex items-center p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-green-300 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="additionalLanguages"
+                            value={option.toLowerCase()}
+                            checked={formData.additionalLanguages === option.toLowerCase()}
+                            onChange={(e) => handleChange('additionalLanguages', e.target.value)}
+                            className="w-4 h-4 text-green-600 focus:ring-green-500 border-gray-300"
+                          />
+                          <span className="ml-3 text-slate-900 font-medium">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Voice Gender *</label>
-              <div className="space-y-2">
-                {['Male', 'Female', 'No preference'].map(gender => (
-                  <label key={gender} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value={gender.toLowerCase()}
-                      checked={formData.voiceGender === gender.toLowerCase()}
-                      onChange={(e) => handleChange('voiceGender', e.target.value)}
-                      className="mr-2"
-                    />
-                    {gender}
-                  </label>
-                ))}
+                  {formData.additionalLanguages === 'yes' && (
+                    <div className="animate-slide-down">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Which languages should the AI support?
+                      </label>
+                      <textarea
+                        value={formData.languageList}
+                        onChange={(e) => handleChange('languageList', e.target.value)}
+                        rows="3"
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-900 focus:border-green-500 focus:ring-0 transition-all duration-200 shadow-sm hover:shadow-soft resize-none"
+                        placeholder="e.g., Spanish, French, Mandarin, Portuguese, German..."
+                      />
+                      <p className="text-sm text-slate-600 mt-2">
+                        💡 Note: AI will automatically detect the customer's language and respond accordingly
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              {renderError('voiceGender')}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">English Accent / Locale *</label>
-              <div className="space-y-2">
-                {['US', 'Canadian', 'UK', 'Australian', 'Other'].map(accent => (
-                  <label key={accent} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="accent"
-                      value={accent.toLowerCase()}
-                      checked={formData.accent === accent.toLowerCase()}
-                      onChange={(e) => handleChange('accent', e.target.value)}
-                      className="mr-2"
-                    />
-                    {accent}
-                  </label>
-                ))}
-              </div>
-              {renderError('accent')}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Languages Needed?</label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="additionalLanguages"
-                    value="no"
-                    checked={formData.additionalLanguages === 'no'}
-                    onChange={(e) => handleChange('additionalLanguages', e.target.value)}
-                    className="mr-2"
-                  />
-                  No
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="additionalLanguages"
-                    value="yes"
-                    checked={formData.additionalLanguages === 'yes'}
-                    onChange={(e) => handleChange('additionalLanguages', e.target.value)}
-                    className="mr-2"
-                  />
-                  Yes
-                </label>
-              </div>
-              {formData.additionalLanguages === 'yes' && (
-                <input
-                  type="text"
-                  value={formData.languageList}
-                  onChange={(e) => handleChange('languageList', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="List languages (e.g., Spanish, French, German)"
-                />
+              
+              {formData.additionalLanguages === 'yes' && formData.languageList && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-blue-900 mb-2">Multilingual AI Configured</h4>
+                      <p className="text-blue-800">
+                        <strong>Supported Languages:</strong> {formData.languageList}
+                      </p>
+                      <p className="text-sm text-blue-700 mt-2">
+                        🎯 Your AI will automatically switch between languages based on customer communication
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
         );
 
-      case 7:
+      case 8:
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">⚙️ Final Setup</h2>

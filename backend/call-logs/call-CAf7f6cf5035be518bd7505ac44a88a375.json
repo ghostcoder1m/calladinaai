@@ -1,0 +1,50 @@
+{
+  "callSid": "CAf7f6cf5035be518bd7505ac44a88a375",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:12:09.408Z",
+  "endTime": "2025-07-28T03:13:22.004Z",
+  "duration": 72596,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "uh, Hey, I want to speak to the receptionist",
+      "timestamp": "2025-07-28T03:12:34.584Z"
+    },
+    {
+      "type": "assistant",
+      "content": "One moment please, I'm transferring you to our Main Receptionist.",
+      "timestamp": "2025-07-28T03:12:36.093Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! You've been transferred to our Main Receptionist. How can I assist you today?",
+      "timestamp": "2025-07-28T03:12:38.080Z"
+    },
+    {
+      "type": "user",
+      "content": "How are you?",
+      "timestamp": "2025-07-28T03:12:51.784Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm an AI, so I don't have feelings, but I'm here and ready to assist you. How can I help you today?",
+      "timestamp": "2025-07-28T03:12:53.792Z"
+    },
+    {
+      "type": "user",
+      "content": "Uh, transfer me to support.",
+      "timestamp": "2025-07-28T03:13:07.965Z"
+    },
+    {
+      "type": "assistant",
+      "content": "One moment please, I'm transferring you to our Support.",
+      "timestamp": "2025-07-28T03:13:09.459Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! You've been transferred to our Support. How can I assist you today?",
+      "timestamp": "2025-07-28T03:13:11.452Z"
+    }
+  ],
+  "status": "completed"
+}

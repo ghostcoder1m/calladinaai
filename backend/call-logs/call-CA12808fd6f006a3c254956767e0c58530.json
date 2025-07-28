@@ -1,0 +1,29 @@
+{
+  "callSid": "CA12808fd6f006a3c254956767e0c58530",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T02:40:26.442Z",
+  "endTime": "2025-07-28T02:40:48.713Z",
+  "duration": 22271,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "Uh, I just had a question.",
+      "timestamp": "2025-07-28T02:40:40.464Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Of course! I'm here to help. What's your question?",
+      "timestamp": "2025-07-28T02:40:42.567Z"
+    },
+    {
+      "type": "user",
+      "timestamp": "2025-07-28T02:40:48.427Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm not sure about that. Let me transfer you to a human representative.",
+      "timestamp": "2025-07-28T02:40:48.610Z"
+    }
+  ],
+  "status": "completed"
+}

@@ -1,0 +1,29 @@
+{
+  "callSid": "CA1c67504c8be46de9a7e585f1ef14f413",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T02:42:15.872Z",
+  "endTime": "2025-07-28T02:42:41.637Z",
+  "duration": 25765,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "How can I help?",
+      "timestamp": "2025-07-28T02:42:30.286Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! Thank you for calling Your Business. I'm Calladina, your AI assistant. How can I help you today?",
+      "timestamp": "2025-07-28T02:42:33.267Z"
+    },
+    {
+      "type": "user",
+      "timestamp": "2025-07-28T02:42:40.832Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm not sure about that. Let me transfer you to a human representative.",
+      "timestamp": "2025-07-28T02:42:41.525Z"
+    }
+  ],
+  "status": "completed"
+}

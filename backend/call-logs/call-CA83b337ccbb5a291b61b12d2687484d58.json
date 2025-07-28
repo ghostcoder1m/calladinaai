@@ -1,0 +1,25 @@
+{
+  "callSid": "CA83b337ccbb5a291b61b12d2687484d58",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:52:20.231Z",
+  "endTime": "2025-07-28T03:53:06.242Z",
+  "duration": 46011,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "Hey, can you transfer me to, uh, the receptionist?",
+      "timestamp": "2025-07-28T03:52:47.891Z"
+    },
+    {
+      "type": "assistant",
+      "content": "One moment please, I'm transferring you to our Main Receptionist.",
+      "timestamp": "2025-07-28T03:52:49.789Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! You've been transferred to our Main Receptionist. How can I assist you today?",
+      "timestamp": "2025-07-28T03:52:51.736Z"
+    }
+  ],
+  "status": "completed"
+}

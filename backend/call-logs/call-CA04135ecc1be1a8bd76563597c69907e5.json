@@ -1,0 +1,20 @@
+{
+  "callSid": "CA04135ecc1be1a8bd76563597c69907e5",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:04:22.461Z",
+  "endTime": "2025-07-28T03:05:11.308Z",
+  "duration": 48847,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "I'm looking to be transferred to the section.",
+      "timestamp": "2025-07-28T03:04:53.695Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm sorry for the confusion, but could you please specify which department or service you'd like to be transferred to? We offer Customer Support and Appointments.",
+      "timestamp": "2025-07-28T03:04:55.939Z"
+    }
+  ],
+  "status": "completed"
+}

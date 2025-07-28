@@ -1,0 +1,20 @@
+{
+  "callSid": "CA1dda9e0f02eb3a212ec69abaeaffdb03",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:08:59.234Z",
+  "endTime": "2025-07-28T03:09:41.728Z",
+  "duration": 42494,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "I want to be transferred to the main receptionist.",
+      "timestamp": "2025-07-28T03:09:26.983Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Of course, I'd be happy to assist with that. Please hold on while I connect you to our main receptionist.",
+      "timestamp": "2025-07-28T03:09:28.348Z"
+    }
+  ],
+  "status": "completed"
+}

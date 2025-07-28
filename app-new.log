@@ -1,0 +1,37 @@
+
+> calladina@1.0.0 start
+> concurrently "cd backend && npm start" "cd frontend && npm start"
+
+[1] 
+[1] > calladina-frontend@0.1.0 start
+[1] > react-scripts start
+[1] 
+[0] 
+[0] > calladina-backend@1.0.0 start
+[0] > node server.js
+[0] 
+[0] 🚀 Calladina AI Voice Agent Server running on port 3001
+[0] 🤖 AI Services Status:
+[0]    - OpenAI: ✅ Connected
+[0]    - ElevenLabs: ✅ Connected
+[0]    - Twilio: ✅ Connected
+[0] 📅 Google Calendar: ⚠️  Credentials file not found
+[0] 📞 Webhook URL: https://63d9489648d0.ngrok-free.app/api/voice-webhook
+[0] Loaded existing agent knowledge
+[1] Something is already running on port 3000.
+[1] cd frontend && npm start exited with code 0
+[0] 📞 Incoming call from +16136009723, CallSid: TESTFIX1753681013, Digits: none
+[0] 🎯 IVR Menu: "Hello and thank you for calling Call Adina. Please select from the following options: Press 1 for 1. Press 0 to speak with our main receptionist."
+[0] 🔊 Playing IVR menu: https://63d9489648d0.ngrok-free.app/public/menu_TESTFIX1753681013_1753681014986.mp3
+[0] 🔧 Configuring webhook for +13436553015...
+[0] 📡 Voice webhook: https://63d9489648d0.ngrok-free.app/api/voice-webhook
+[0] 📊 Status webhook: https://63d9489648d0.ngrok-free.app/api/status-webhook
+[0] ✅ Webhook configured successfully for +13436553015
+[0] 📞 Incoming call from +16136009723, CallSid: CAb09c7780064de62c1d0b7e306072ee9d, Digits: none
+[0] 🎯 IVR Menu: "Hello and thank you for calling Call Adina. Please select from the following options: Press 1 for 1. Press 0 to speak with our main receptionist."
+[0] 🔊 Playing IVR menu: https://63d9489648d0.ngrok-free.app/public/menu_CAb09c7780064de62c1d0b7e306072ee9d_1753681044781.mp3
+[0] 📞 Incoming call from +16136009723, CallSid: CAb09c7780064de62c1d0b7e306072ee9d, Digits: none
+[0] 🎯 IVR Menu: "Hello and thank you for calling Call Adina. Please select from the following options: Press 1 for 1. Press 0 to speak with our main receptionist."
+[0] Call CAb09c7780064de62c1d0b7e306072ee9d status: completed
+[0] Call ended. Duration: 10681ms
+[0] 🔊 Playing IVR menu: https://63d9489648d0.ngrok-free.app/public/menu_CAb09c7780064de62c1d0b7e306072ee9d_1753681054436.mp3

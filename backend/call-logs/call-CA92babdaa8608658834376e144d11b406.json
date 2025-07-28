@@ -1,0 +1,35 @@
+{
+  "callSid": "CA92babdaa8608658834376e144d11b406",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:19:11.092Z",
+  "endTime": "2025-07-28T03:20:21.754Z",
+  "duration": 70662,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "Hey, can you transfer me to service?",
+      "timestamp": "2025-07-28T03:19:39.411Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm sorry for any confusion, but we don't have a department specifically named \"Service\". We do have a Support and Sales department. Which one would you like to be transferred to?",
+      "timestamp": "2025-07-28T03:19:42.703Z"
+    },
+    {
+      "type": "user",
+      "content": "Uh, support, please.",
+      "timestamp": "2025-07-28T03:20:02.043Z"
+    },
+    {
+      "type": "assistant",
+      "content": "One moment please, I'm transferring you to our Support.",
+      "timestamp": "2025-07-28T03:20:03.554Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! You've been transferred to our Support. How can I assist you today?",
+      "timestamp": "2025-07-28T03:20:06.555Z"
+    }
+  ],
+  "status": "completed"
+}

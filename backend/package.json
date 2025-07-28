@@ -9,12 +9,20 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
-    "twilio": "^5.7.3"
+    "googleapis": "^154.0.0",
+    "multer": "^2.0.2",
+    "node-speech-to-text": "^1.0.0",
+    "openai": "^5.10.2",
+    "twilio": "^5.7.3",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "ngrok": "^5.0.0-beta.2",
     "nodemon": "^3.1.10"
   },
   "keywords": [

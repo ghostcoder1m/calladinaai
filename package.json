@@ -1,35 +1,31 @@
 {
   "name": "calladina",
   "version": "1.0.0",
-  "description": "AI Voice Receptionist Setup Application - Full Stack",
+  "description": "AI Voice Receptionist Application",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-    "backend": "cd backend && npm run dev",
-    "frontend": "cd frontend && npm start",
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend && npm install",
-    "install:all": "npm run install:backend && npm run install:frontend",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "start": "concurrently \"cd backend && npm start\" \"cd frontend && npm start\"",
     "build": "cd frontend && npm run build",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm start",
-    "setup": "npm run install:all && echo 'Setup complete! Create .env files in both frontend and backend directories using the .env.example templates.'"
+    "deploy-ngrok": "cd backend && ngrok http 3001 --domain=your-domain.ngrok.io",
+    "deploy-dev": "concurrently \"cd backend && npm run dev\" \"ngrok http 3001\"",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "devDependencies": {
+    "ngrok": "^5.0.0-beta.2"
   },
   "keywords": [
     "ai",
     "voice",
     "receptionist",
     "twilio",
-    "firebase",
-    "react",
-    "express"
+    "openai",
+    "elevenlabs"
   ],
   "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "concurrently": "^9.2.0"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  }
+  "license": "MIT"
 }

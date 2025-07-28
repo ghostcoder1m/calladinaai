@@ -1,0 +1,44 @@
+{
+  "callSid": "CA67600f939e2bd8f22289b5c572d3409c",
+  "from": "+16136009723",
+  "startTime": "2025-07-28T03:16:12.637Z",
+  "endTime": "2025-07-28T03:17:09.242Z",
+  "duration": 56605,
+  "conversationHistory": [
+    {
+      "type": "user",
+      "content": "Transfer me to support.",
+      "timestamp": "2025-07-28T03:16:38.944Z"
+    },
+    {
+      "type": "assistant",
+      "content": "One moment please, I'm transferring you to our Support.",
+      "timestamp": "2025-07-28T03:16:41.684Z"
+    },
+    {
+      "type": "assistant",
+      "content": "Hello! You've been transferred to our Support. How can I assist you today?",
+      "timestamp": "2025-07-28T03:16:43.512Z"
+    },
+    {
+      "type": "user",
+      "content": "What do you guys do?",
+      "timestamp": "2025-07-28T03:16:56.830Z"
+    },
+    {
+      "type": "assistant",
+      "content": "We offer customer support, appointments, and general information services. Which service are you interested in?",
+      "timestamp": "2025-07-28T03:16:58.058Z"
+    },
+    {
+      "type": "user",
+      "timestamp": "2025-07-28T03:17:08.915Z"
+    },
+    {
+      "type": "assistant",
+      "content": "I'm not sure about that. Let me transfer you to a human representative.",
+      "timestamp": "2025-07-28T03:17:09.139Z"
+    }
+  ],
+  "status": "completed"
+}

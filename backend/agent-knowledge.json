@@ -1,0 +1,59 @@
+{
+  "businessInfo": {
+    "name": "Call Adina",
+    "hours": "9:00 AM - 5:00 PM Monday to Friday",
+    "services": [
+      "Customer Support",
+      "Appointments",
+      "General Information",
+      "AI Voice Agent Services"
+    ],
+    "contact": {
+      "email": "contact@calladina.com",
+      "phone": "+13436553015"
+    },
+    "industry": "AI Voice Services"
+  },
+  "responses": {
+    "greeting": "Hello! Thank you for calling Call Adina. I'm your AI assistant. How can I help you today?",
+    "fallback": "I'm not sure about that. Let me connect you with someone who can help.",
+    "goodbye": "Thank you for calling Call Adina. Have a great day!",
+    "hours": "We're open 9:00 AM - 5:00 PM Monday to Friday. If you're calling outside these hours, please leave a message or call back during business hours.",
+    "services": "We offer Customer Support, Appointments, General Information, and AI Voice Agent Services. Which service are you interested in?"
+  },
+  "personality": {
+    "tone": "professional and friendly",
+    "style": "concise but helpful",
+    "traits": [
+      "patient",
+      "understanding",
+      "professional"
+    ]
+  },
+  "selectedVoice": "Sarah (Australian, professional)",
+  "departments": [
+    {
+      "voice": {
+        "accent": "American",
+        "category": "premade",
+        "name": "Sarah",
+        "description": "Young adult woman with a confident and warm, mature quality and a reassuring, professional tone.",
+        "voice_id": "EXAVITQu4vr4xnSDxMaL",
+        "gender": "female",
+        "preview_url": "https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3",
+        "tone": "Professional",
+        "age": "young",
+        "labels": {
+          "accent": "american",
+          "gender": "female",
+          "age": "young",
+          "descriptive": "professional",
+          "use_case": "entertainment_tv",
+          "language": "en"
+        }
+      },
+      "extension": "100",
+      "name": "1"
+    }
+  ]
+}
